@@ -1,6 +1,11 @@
 import SwiftUI
 
-/// Item de navegação da sidebar recolhível.
+enum SidebarDestination: Hashable {
+    case dashboard
+    case timeline
+    case attachments
+}
+
 struct SidebarItem: Identifiable, Hashable {
     let id = UUID()
     let title: String

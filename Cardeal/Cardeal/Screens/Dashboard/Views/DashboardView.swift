@@ -17,23 +17,54 @@ import SwiftUI
 
 struct DashboardView: View {
     @State private var columnVisibility: NavigationSplitViewVisibility = .automatic
-    @State private var selectedSidebarItem: SidebarItem? = MockData.sidebarItems.first
+    @State private var selectedDestination: SidebarDestination? = .dashboard
     @State private var selectedTab: FilterTab = MockData.filterTabs.first!
     @State private var searchText: String = ""
     @State private var weekRangeText: String = "26 de julho a 01 de agosto, 2026"
 
     var body: some View {
         NavigationSplitView(columnVisibility: $columnVisibility) {
-            SidebarView(items: MockData.sidebarItems, selection: $selectedSidebarItem)
+            SidebarView(selection: $selectedDestination)
                 .navigationSplitViewColumnWidth(min: 180, ideal: 220, max: 260)
         } detail: {
-            DashboardContentView(
+            SidebarDetailView(
+                selection: selectedDestination,
                 searchText: $searchText,
                 weekRangeText: $weekRangeText,
                 selectedTab: $selectedTab
             )
         }
         .navigationSplitViewStyle(.balanced)
+    }
+}
+
+// MARK: - Destino da navegação
+
+private struct SidebarDetailView: View {
+    let selection: SidebarDestination?
+    @Binding var searchText: String
+    @Binding var weekRangeText: String
+    @Binding var selectedTab: FilterTab
+
+    @ViewBuilder
+    var body: some View {
+        switch selection {
+        case .dashboard:
+            DashboardContentView(
+                searchText: $searchText,
+                weekRangeText: $weekRangeText,
+                selectedTab: $selectedTab
+            )
+        case .timeline:
+            TimelineView()
+        case .attachments:
+            AttachmentsView()
+        case nil:
+            ContentUnavailableView(
+                "Selecione uma opção",
+                systemImage: "sidebar.left"
+            )
+        }
     }
 }
 

@@ -1,4 +1,3 @@
-//
 //  MeetingsView.swift
 //  Cardeal
 //
@@ -7,8 +6,8 @@
 
 import SwiftUI
 
-struct MeetingsView: View {
+struct TimelineView: View {
     var body: some View {
-        Text("Meetings")
+        Text("Timeline")
     }
 }

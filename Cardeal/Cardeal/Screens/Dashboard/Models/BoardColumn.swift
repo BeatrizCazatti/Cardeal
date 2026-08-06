@@ -1,5 +1,12 @@
 import SwiftUI
 
+/// Uma coluna do board (ex.: "Atendimento", "Design"...).
+struct BoardColumn: Identifiable, Hashable {
+    let id = UUID()
+    let title: String
+    let items: [BoardItem]
+}
+
 /// Um card individual dentro de uma coluna do board.
 struct BoardItem: Identifiable, Hashable {
     let id = UUID()
