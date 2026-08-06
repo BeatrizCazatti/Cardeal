@@ -1,5 +1,5 @@
 //
-//  WeeklyBriefingDashboard.swift
+//  Dashboard.swift
 //  Dashboard semanal — layout tipo Kanban com sidebar recolhível
 //
 //  Segue as diretrizes da Apple Human Interface Guidelines (HIG) para macOS,
@@ -13,74 +13,9 @@
 
 import SwiftUI
 
-// MARK: - Modelos de dados
-
-/// Uma pessoa (ou grupo) atribuída a um item do board.
-struct Assignee: Identifiable, Hashable {
-    let id = UUID()
-    let name: String
-    /// Se `true`, usa o símbolo "person.2.fill" (grupo). Caso contrário, "person.fill".
-    let isGroup: Bool
-}
-
-/// Um card individual dentro de uma coluna do board.
-struct BoardItem: Identifiable, Hashable {
-    let id = UUID()
-    let title: String
-    /// Número exibido no badge circular no canto superior do card (opcional).
-    let badgeCount: Int?
-    let assignees: [Assignee]
-    /// Texto livre de data (ex.: "Amanhã - 17h").
-    let dateText: String?
-    /// Se `true`, destaca a data como "Nova data" (ex.: reagendamento).
-    let isRescheduled: Bool
-    let location: String?
-    /// Usado por cards de "decisão", que mostram um parágrafo em vez de metadados.
-    let descriptionText: String?
-
-    init(
-        title: String,
-        badgeCount: Int? = nil,
-        assignees: [Assignee] = [],
-        dateText: String? = nil,
-        isRescheduled: Bool = false,
-        location: String? = nil,
-        descriptionText: String? = nil
-    ) {
-        self.title = title
-        self.badgeCount = badgeCount
-        self.assignees = assignees
-        self.dateText = dateText
-        self.isRescheduled = isRescheduled
-        self.location = location
-        self.descriptionText = descriptionText
-    }
-}
-
-/// Uma coluna do board (ex.: "Atendimento", "Design"...).
-struct BoardColumn: Identifiable, Hashable {
-    let id = UUID()
-    let title: String
-    let items: [BoardItem]
-}
-
-/// Uma aba de filtro no topo (ex.: "Geral", "Reuniões"...), com contador.
-struct FilterTab: Identifiable, Hashable {
-    let id = UUID()
-    let title: String
-    let count: Int
-}
-
-/// Item de navegação da sidebar recolhível.
-struct SidebarItem: Identifiable, Hashable {
-    let id = UUID()
-    let title: String
-    let systemImage: String
-}
-
 // MARK: - View principal
 
-struct WeeklyBriefingDashboard: View {
+struct DashboardView: View {
     @State private var columnVisibility: NavigationSplitViewVisibility = .automatic
     @State private var selectedSidebarItem: SidebarItem? = MockData.sidebarItems.first
     @State private var selectedTab: FilterTab = MockData.filterTabs.first!
@@ -99,24 +34,6 @@ struct WeeklyBriefingDashboard: View {
             )
         }
         .navigationSplitViewStyle(.balanced)
-    }
-}
-
-// MARK: - Sidebar recolhível
-
-/// Sidebar de navegação seguindo o padrão `NavigationSplitView` do macOS,
-/// que já oferece o botão nativo de recolher/expandir na toolbar.
-struct SidebarView: View {
-    let items: [SidebarItem]
-    @Binding var selection: SidebarItem?
-
-    var body: some View {
-        List(items, selection: $selection) { item in
-            Label(item.title, systemImage: item.systemImage)
-                .tag(item)
-        }
-        .listStyle(.sidebar)
-        .navigationTitle("Painel")
     }
 }
 
@@ -164,12 +81,11 @@ struct GreetingHeaderView: View {
     let name: String
 
     var body: some View {
-        Text("Olá, ")
-            .font(.system(size: 26, weight: .regular))
-            .foregroundStyle(.blue)
-        Text(name + "!")
-            .font(.system(size: 26, weight: .bold))
-            .foregroundStyle(.blue)
+        (
+            Text("Olá, " + name + "!")
+                .font(.title.weight(.regular))
+        )
+        .foregroundStyle(.blue)
     }
 }
 
@@ -188,8 +104,7 @@ struct WeekNavigatorView: View {
             .buttonStyle(.plain)
 
             Text(rangeText)
-                .font(.system(size: 18, weight: .medium))
-                .foregroundStyle(.blue)
+                .font(.title3.weight(.medium))
 
             Button {
                 // Ação: próxima semana
@@ -202,95 +117,6 @@ struct WeekNavigatorView: View {
     }
 }
 
-// MARK: - Abas de filtro (com badges) usando Liquid Glass
-
-struct FilterTabsView: View {
-
-    let tabs: [FilterTab]
-    @Binding var selection: FilterTab
-    @Namespace private var glassSelection: Namespace.ID
-
-    var body: some View {
-
-        HStack(spacing: 4) {
-
-            ForEach(tabs) { tab in
-
-                FilterTabButton(
-                    tab: tab,
-                    isSelected: tab == selection,
-                    glassSelection: glassSelection
-                ) {
-                    withAnimation(.snappy(duration: 0.35)) {
-                        selection = tab
-                    }
-                }
-
-            }
-
-        }
-        .padding(4)
-        .background {
-
-            RoundedRectangle(cornerRadius: 20)
-                .glassEffect()
-
-        }
-    }
-}
-
-struct FilterTabButton: View {
-
-    let tab: FilterTab
-    let isSelected: Bool
-    let glassSelection: Namespace.ID
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-
-            Text(tab.title)
-                .font(.headline)
-                .foregroundStyle(isSelected ? .primary : .secondary)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 10)
-                .contentShape(.rect)
-
-        }
-        .buttonStyle(.plain)
-        .background {
-
-            if isSelected {
-
-                RoundedRectangle(cornerRadius: 16)
-                    .glassEffect()
-                    .matchedGeometryEffect(
-                        id: "selection",
-                        in: glassSelection
-                    )
-
-            }
-
-        }
-    }
-}
-
-/// Badge circular numerado, reutilizado nas abas e nos cards.
-struct CountBadge: View {
-    let count: Int
-    var prominent: Bool = false
-
-    var body: some View {
-        Text("\(count)")
-            .font(.system(size: 11, weight: .bold))
-            .foregroundStyle(.white)
-            .frame(width: 20, height: 20)
-            .background(
-                Circle()
-                    .fill(prominent ? AnyShapeStyle(Color.white.opacity(0.25)) : AnyShapeStyle(Color.red.gradient))
-            )
-    }
-}
 
 // MARK: - Botões de ação da toolbar (filtro, ordenar, atualizar, novo item)
 
@@ -342,7 +168,7 @@ private struct GlassLabeledButton: View {
             HStack(spacing: 6) {
                 Image(systemName: systemImage)
                 Text(title)
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(.subheadline.weight(.semibold))
             }
             .foregroundStyle(.white)
             .padding(.vertical, 9)
@@ -379,7 +205,7 @@ struct BoardColumnView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text(column.title)
-                .font(.system(size: 17, weight: .semibold))
+                .font(.headline)
                 .foregroundStyle(.blue)
 
             Divider()
@@ -403,7 +229,7 @@ struct EmptyColumnView: View {
                 .font(.system(size: 32, weight: .light))
                 .foregroundStyle(.secondary)
             Text("Tudo calmo por aqui!")
-                .font(.system(size: 13))
+                .font(.subheadline)
                 .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity, minHeight: 160)
@@ -421,7 +247,7 @@ struct BoardItemCardView: View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .top) {
                 Text(item.title)
-                    .font(.system(size: 15, weight: .semibold))
+                    .font(.subheadline.weight(.semibold))
                     .foregroundStyle(.primary)
                     .fixedSize(horizontal: false, vertical: true)
 
@@ -446,7 +272,7 @@ struct BoardItemCardView: View {
 
             if let description = item.descriptionText {
                 Text(description)
-                    .font(.system(size: 12.5))
+                    .font(.caption)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -490,10 +316,10 @@ private struct MetadataRow: View {
     var body: some View {
         HStack(spacing: 6) {
             Image(systemName: systemImage)
-                .font(.system(size: 11))
+                .font(.caption)
                 .foregroundStyle(.blue)
             Text(text)
-                .font(.system(size: 12.5, weight: highlighted ? .semibold : .regular))
+                .font(.caption.weight(highlighted ? .semibold : .regular))
                 .foregroundStyle(highlighted ? .red : .secondary)
         }
     }
@@ -505,10 +331,10 @@ struct FooterView: View {
     let lastUpdated: String
 
     var body: some View {
-        HStack {
+        VStack {
             Spacer()
             Text("Última atualização em \(lastUpdated)")
-                .font(.system(size: 12))
+                .font(.caption)
                 .foregroundStyle(.secondary)
         }
     }
@@ -526,7 +352,7 @@ struct SearchFieldView: View {
             TextField("Buscar informações e arquivos...", text: $text)
                 .textFieldStyle(.plain)
         }
-        .font(.system(size: 13))
+        .font(.subheadline)
         .padding(.vertical, 6)
         .padding(.horizontal, 10)
         .modifier(GlassPillModifier(tint: nil, isSelected: false))
@@ -562,7 +388,7 @@ struct GlassEffectContainerCompat<Content: View>: View {
 }
 
 /// Aplica o efeito de vidro em forma de "pílula" (cápsula), usado em
-/// botões, abas e no campo de busca.
+/// botões e no campo de busca.
 struct GlassPillModifier: ViewModifier {
     let tint: Color?
     let isSelected: Bool
@@ -609,6 +435,6 @@ struct GlassCardModifier: ViewModifier {
 // MARK: - Preview
 
 #Preview {
-    WeeklyBriefingDashboard()
+    DashboardView()
         .frame(minWidth: 1200, minHeight: 800)
 }
