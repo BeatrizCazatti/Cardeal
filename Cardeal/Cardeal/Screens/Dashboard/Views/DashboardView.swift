@@ -214,12 +214,15 @@ private struct GlassLabeledButton: View {
 
 struct BoardView: View {
     let columns: [BoardColumn]
+    @State private var selectedTeam: TeamDetail?
 
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             LazyHStack(alignment: .top, spacing: 32) {
                 ForEach(columns) { column in
-                    BoardColumnView(column: column)
+                    BoardColumnView(column: column) {
+                        selectedTeam = MockData.teamDetails.first { $0.name == column.title }
+                    }
                         .frame(width: 320)
                 }
             }
@@ -227,17 +230,25 @@ struct BoardView: View {
             .padding(.bottom)
         }
         .scrollClipDisabled()
+        .sheet(item: $selectedTeam) { team in
+            TeamDetailSheet(team: team)
+        }
     }
 }
 
 struct BoardColumnView: View {
     let column: BoardColumn
+    let onSelectTeam: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text(column.title)
-                .font(.headline)
-                .foregroundStyle(.blue)
+            Button(action: onSelectTeam) {
+                Text(column.title)
+                    .font(.headline)
+                    .foregroundStyle(.blue)
+            }
+            .buttonStyle(.plain)
+            .accessibilityHint("Abre os detalhes da equipe \(column.title)")
 
             Divider()
 

@@ -17,6 +17,89 @@ enum MockData {
         FilterTab(title: "Decisões", count: 4)
     ]
 
+    static let attachments: [AttachmentItem] = [
+        AttachmentItem(
+            name: "Ata de reunião Financeiro (07/05/26)",
+            owner: "Fabíola Machado",
+            location: "Google Drive > pasta Financeiro",
+            team: "Financeiro",
+            type: .document,
+            folder: .meetingMinutes
+        ),
+        AttachmentItem(
+            name: "Ata de reunião Design (07/05/26)",
+            owner: "Eduarda Vieira",
+            location: "Google Chat > grupo Design",
+            team: "Design",
+            type: .document,
+            folder: .meetingMinutes
+        ),
+        AttachmentItem(
+            name: "Ata de reunião Atendimento (07/05/26)",
+            owner: "Leonardo Drummond",
+            location: "Google Drive > pasta Atendimento",
+            team: "Atendimento",
+            type: .document,
+            folder: .meetingMinutes
+        ),
+        AttachmentItem(
+            name: "Ata de reunião geral (07/05/26)",
+            owner: "Leonardo Drummond",
+            location: "Google Drive > pasta Reuniões",
+            team: "Operações",
+            type: .document,
+            folder: .meetingMinutes
+        ),
+        AttachmentItem(
+            name: "Ata de reunião Financeiro (07/04/26)",
+            owner: "Fabíola Machado",
+            location: "Google Drive > pasta Financeiro",
+            team: "Financeiro",
+            type: .document,
+            folder: .meetingMinutes
+        ),
+        AttachmentItem(
+            name: "Ata de reunião Operações (07/04/26)",
+            owner: "Fabíola Machado",
+            location: "Google Chat > grupo Operações",
+            team: "Operações",
+            type: .document,
+            folder: .meetingMinutes
+        ),
+        AttachmentItem(
+            name: "Ata de reunião Atendimento (14/08/25)",
+            owner: "Eduarda Vieira",
+            location: "Google Drive > pasta Atendimento",
+            team: "Atendimento",
+            type: .document,
+            folder: .meetingMinutes
+        ),
+        AttachmentItem(
+            name: "Análise de conversão do produto",
+            owner: "Eduarda Vieira",
+            location: "Google Drive > Produto > Análises",
+            team: "Design",
+            type: .spreadsheet,
+            folder: .productAnalysis
+        ),
+        AttachmentItem(
+            name: "Contrato de prestação de serviços",
+            owner: "Fabíola Machado",
+            location: "Google Drive > Jurídico > Contratos",
+            team: "Financeiro",
+            type: .document,
+            folder: .contracts
+        ),
+        AttachmentItem(
+            name: "Proposta comercial - Agosto",
+            owner: "Leonardo Drummond",
+            location: "Google Drive > Comercial > Propostas",
+            team: "Atendimento",
+            type: .presentation,
+            folder: .commercial
+        )
+    ]
+
     static let columns: [BoardColumn] = [
         BoardColumn(
             title: "Atendimento",
@@ -64,5 +147,44 @@ enum MockData {
             ]
         ),
         BoardColumn(title: "Operação", items: [])
+    ]
+
+    static let teamDetails: [TeamDetail] = [
+        TeamDetail(
+            name: "Atendimento",
+            members: [
+                TeamMember(name: "Fabíola Machado", role: "Líder de atendimento", email: "fabiola@cardeal.com", hiredDate: "10 de maio, 2024", relatedProjects: ["Onboarding clientes", "Suporte prioritário"], recentActivities: ["Revisão de pauta semanal", "Aprovação de atendimento"]),
+                TeamMember(name: "Leonardo Drummond", role: "Analista de atendimento", email: "leonardo@cardeal.com", hiredDate: "18 de junho, 2025", relatedProjects: ["Central de ajuda", "Relatórios de SLA"], recentActivities: ["Ata de reunião Atendimento", "Atualização de chamados"])
+            ],
+            timeline: teamTimeline
+        ),
+        TeamDetail(
+            name: "Design",
+            members: [
+                TeamMember(name: "Eduarda Vieira", role: "Co-fundadora", email: "eduarda@cardeal.com", hiredDate: "10 de maio, 2026", relatedProjects: ["Posts Instagram", "Embalagem Fone", "Banners novos"], recentActivities: ["Implementação da nova identidade visual", "Revisão de peças para campanha"]),
+                TeamMember(name: "Aline Souza", role: "Designer", email: "aline@cardeal.com", hiredDate: "12 de fevereiro, 2025", relatedProjects: ["Guia de marca", "Biblioteca de componentes"], recentActivities: ["Criação de post para Instagram", "Aprovação de layout"])
+            ],
+            timeline: teamTimeline
+        ),
+        TeamDetail(
+            name: "Financeiro",
+            members: [
+                TeamMember(name: "Fabíola Machado", role: "Responsável financeiro", email: "fabiola@cardeal.com", hiredDate: "10 de maio, 2024", relatedProjects: ["Planejamento anual", "Controle de custos"], recentActivities: ["Ata de reunião Financeiro", "Revisão de orçamento"])
+            ],
+            timeline: teamTimeline
+        ),
+        TeamDetail(
+            name: "Operação",
+            members: [
+                TeamMember(name: "Leonardo Drummond", role: "Analista de operações", email: "leonardo@cardeal.com", hiredDate: "18 de junho, 2025", relatedProjects: ["Novo sistema de tickets", "Melhoria de processos"], recentActivities: ["Mapeamento de processos", "Reunião de operações"])
+            ],
+            timeline: teamTimeline
+        )
+    ]
+
+    private static let teamTimeline: [TeamActivity] = [
+        TeamActivity(category: .decision, title: "Novo sistema de ticket a ser implementado", detail: "A decisão foi tomada para melhorar o custo-benefício e será implementada até o fim de agosto.", date: "29 de julho, 2026", participants: ["Leonardo Drummond", "Eduarda Vieira"]),
+        TeamActivity(category: .task, title: "Novo sistema de ticket a ser implementado", detail: "Os responsáveis confirmaram ciência e iniciarão a mudança em breve.", date: "29 de julho, 2026", participants: ["Leonardo Drummond", "Eduarda Vieira"]),
+        TeamActivity(category: .meeting, title: "Alinhamento da implementação", detail: "Foram definidos os próximos passos e a comunicação com as equipes.", date: "29 de julho, 2026", participants: ["Leonardo Drummond", "Eduarda Vieira"])
     ]
 }
