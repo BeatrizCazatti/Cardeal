@@ -11,7 +11,7 @@ struct TesteView: View {
         ]
     var body: some View {
         VStack {
-            GlassSegmentedControl(selection: $activeIndex, tabs: $tabs)
+            GlassSegmentedControl(selection: $activeIndex, tabs: tabs)
         }
     }
 }

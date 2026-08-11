@@ -254,14 +254,16 @@ private struct GlassLabeledButton: View {
                 Text(title)
                     .font(.subheadline.weight(.semibold))
             }
-            .foregroundStyle(.white)
-            .padding(.vertical, 9)
-            .padding(.horizontal, 16)
+            // Usa .white se for proeminente, senão .primary para se adaptar ao tema
+            .foregroundStyle(prominent ? Color.white : Color.primary)
+            .padding(.vertical, 8)
+            .padding(.horizontal, 14)
         }
         .buttonStyle(.plain)
-        .modifier(GlassPillModifier(tint: .accentColor, isSelected: true))
+        .modifier(GlassPillModifier(tint: prominent ? .accentColor : nil, isSelected: prominent))
     }
 }
+
 
 // MARK: - Board (colunas estilo Kanban)
 
@@ -496,13 +498,21 @@ struct GlassPillModifier: ViewModifier {
             content
                 .glassEffect(
                     tint.map { .regular.tint($0).interactive() } ?? .regular.interactive(),
-                    in: .rect(cornerRadius: cornerRadius)
+                    in: .capsule
                 )
         } else {
             content
                 .background(
-                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                        .fill(tint != nil ? AnyShapeStyle(tint!.gradient) : AnyShapeStyle(.ultraThinMaterial))
+                    Capsule(style: .continuous)
+                        .fill(
+                            tint != nil
+                            ? AnyShapeStyle(tint!.gradient)
+                            : AnyShapeStyle(.ultraThinMaterial)
+                        )
+                )
+                .overlay(
+                    Capsule(style: .continuous)
+                        .strokeBorder(Color.primary.opacity(0.1), lineWidth: 0.5)
                 )
         }
     }
