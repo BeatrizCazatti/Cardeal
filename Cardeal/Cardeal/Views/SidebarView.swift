@@ -14,9 +14,9 @@ struct SidebarView: View {
                 Label("Dashboard", systemImage: "house")
             }
 
-            NavigationLink(value: SidebarDestination.timeline) {
-                Label("Timeline", systemImage: "clock")
-            }
+//            NavigationLink(value: SidebarDestination.timeline) {
+//                Label("Timeline", systemImage: "clock")
+//            }
 
             NavigationLink(value: SidebarDestination.attachments) {
                 Label("Anexos", systemImage: "folder")

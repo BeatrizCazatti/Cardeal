@@ -18,11 +18,8 @@ import SwiftUI
 // frente, ele nunca fica "dentro" do vidro em movimento — fica sempre
 // visível por cima, mesmo em pleno trânsito.
 //
-// A transição tem duas fases, para reproduzir o esticar elástico
-// característico do Liquid Glass (como na referência anexada):
-//   1. a pílula se estica rapidamente para cobrir todo o trajeto entre a
-//      aba antiga e a nova;
-//   2. em seguida contrai, com uma mola, até o tamanho exato do destino.
+// A pílula preserva exatamente o tamanho da aba selecionada. Durante o
+// arraste, somente a sua escala visual muda, como uma lente sobre o texto.
 
 /// Publica a posição (no espaço de coordenadas do próprio grupo de abas)
 /// de cada aba, para que a pílula saiba onde deslizar.
@@ -40,6 +37,7 @@ struct FilterTabsView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var tabFrames: [FilterTab.ID: CGRect] = [:]
     @State private var pillFrame: CGRect?
+    @State private var isDraggingSelection = false
 
     private static let coordinateSpace = "filterTabsRow"
 
@@ -48,10 +46,19 @@ struct FilterTabsView: View {
             ZStack(alignment: .topLeading) {
                 if let pillFrame {
                     Capsule()
-                        // Vidro puro, sem tint de cor — é o acabamento
-                        // fosco/claro e legível da referência (Apple
-                        // Music), sem competir com o texto por cima.
-                        .glassEffect(.regular.interactive(), in: .capsule)
+                        // Durante o arraste, o vidro funciona como lente e
+                        // recebe apenas escala visual. Ao soltar, torna-se
+                        // um fundo translúcido mais escuro, sem deslocar
+                        // nem redimensionar a área dos botões.
+                        .fill(Color.primary.opacity(isDraggingSelection ? 0.04 : 0.18))
+                        .glassEffect(
+                            isDraggingSelection
+                                ? .regular.interactive()
+                                : .regular.tint(Color.black.opacity(0.22)),
+                            in: .capsule
+                        )
+                        .scaleEffect(isDraggingSelection ? 1.045 : 1)
+                        .opacity(isDraggingSelection ? 0.9 : 0.78)
                         .frame(width: pillFrame.width, height: pillFrame.height)
                         .offset(x: pillFrame.minX, y: pillFrame.minY)
                         .allowsHitTesting(false)
@@ -76,6 +83,18 @@ struct FilterTabsView: View {
             .padding(4)
         }
         .coordinateSpace(name: Self.coordinateSpace)
+        .contentShape(Rectangle())
+        .simultaneousGesture(
+            DragGesture(minimumDistance: 0, coordinateSpace: .named(Self.coordinateSpace))
+                .onChanged { value in
+                    isDraggingSelection = true
+                    updateSelection(at: value.location)
+                }
+                .onEnded { value in
+                    updateSelection(at: value.location)
+                    isDraggingSelection = false
+                }
+        )
         .onPreferenceChange(TabFramePreferenceKey.self) { frames in
             tabFrames = frames
             // Sincroniza a pílula com o layout (1ª medição, redimensionar
@@ -86,33 +105,27 @@ struct FilterTabsView: View {
         }
     }
 
-    private func select(_ tab: FilterTab) {
+    private func select(_ tab: FilterTab, isDragging: Bool = false) {
         guard tab != selection else { return }
 
-        guard !reduceMotion,
-              let oldFrame = tabFrames[selection.id],
-              let newFrame = tabFrames[tab.id]
-        else {
-            withAnimation(.easeInOut(duration: 0.2)) {
-                selection = tab
-                pillFrame = tabFrames[tab.id]
-            }
+        selection = tab
+        withAnimation(
+            reduceMotion
+                ? .linear(duration: 0.01)
+                : (isDragging
+                    ? .interactiveSpring(response: 0.26, dampingFraction: 0.82)
+                    : .spring(response: 0.3, dampingFraction: 0.86))
+        ) {
+            pillFrame = tabFrames[tab.id]
+        }
+    }
+
+    private func updateSelection(at location: CGPoint) {
+        guard let tab = tabs.first(where: { tabFrames[$0.id]?.contains(location) == true }) else {
             return
         }
 
-        selection = tab
-
-        // Fase 1 — estica para cobrir todo o trajeto entre origem e destino.
-        withAnimation(.easeOut(duration: 0.16)) {
-            pillFrame = oldFrame.union(newFrame)
-        }
-
-        // Fase 2 — contrai elasticamente até o tamanho exato do destino.
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-            withAnimation(.spring(response: 0.4, dampingFraction: 0.75)) {
-                pillFrame = newFrame
-            }
-        }
+        select(tab, isDragging: true)
     }
 }
 
@@ -120,11 +133,6 @@ private struct FilterTabButton: View {
     let tab: FilterTab
     let isSelected: Bool
     let action: () -> Void
-    var activeSize: Int = 20
-
-    /// Estado local de hover — responde ao ponteiro mesmo antes do clique,
-    /// como pede a HIG para controles no macOS.
-    @State private var isHovering = false
 
     var body: some View {
         Button(action: action) {
@@ -139,22 +147,7 @@ private struct FilterTabButton: View {
             .padding(.horizontal, 14)
             .contentShape(.capsule)
         }
-        
-        .background (alignment: .leading) {
-            ZStack {
-                if #available(iOS 26, *) {
-                    Capsule()
-                        .fill(.clear)
-                        .frame(width: isSelected ? CGFloat(activeSize) : 0, height: CGFloat(activeSize))
-                        .glassEffect(.regular, in: .capsule)
-                }
-                else {
-                    Capsule()
-                        .fill(.ultraThinMaterial)
-                        .frame(width: isSelected ? CGFloat(activeSize) : 0, height: CGFloat(activeSize))
-                }
-            }
-        }
+        .buttonStyle(.plain)
     }
 }
 

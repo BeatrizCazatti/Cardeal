@@ -246,6 +246,8 @@ struct BoardColumnView: View {
                 Text(column.title)
                     .font(.headline)
                     .foregroundStyle(.blue)
+                Spacer()
+                Image(systemName: "arrow.down.left.and.arrow.up.right")
             }
             .buttonStyle(.plain)
             .accessibilityHint("Abre os detalhes da equipe \(column.title)")

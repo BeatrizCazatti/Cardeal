@@ -5,6 +5,7 @@ struct AttachmentsView: View {
     @State private var searchText = ""
     @State private var selectedFolder: AttachmentFolder?
     @State private var selectedAttachmentIDs = Set<AttachmentItem.ID>()
+    @State private var selectedAttachment: AttachmentItem?
     @State private var selectedType: AttachmentType?
     @State private var selectedPerson: String?
     @State private var selectedTeam: String?
@@ -33,6 +34,7 @@ struct AttachmentsView: View {
                     attachments: filteredAttachments,
                     searchText: $searchText,
                     selection: $selectedAttachmentIDs,
+                    selectedAttachment: $selectedAttachment,
                     selectedType: $selectedType,
                     selectedPerson: $selectedPerson,
                     selectedTeam: $selectedTeam,
@@ -44,6 +46,9 @@ struct AttachmentsView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color(nsColor: .windowBackgroundColor))
+        .sheet(item: $selectedAttachment) { attachment in
+            AttachmentDetailSheet(attachment: attachment)
+        }
     }
 
     private func select(_ folder: AttachmentFolder) {
@@ -122,6 +127,7 @@ private struct AttachmentFolderDetailView: View {
     let attachments: [AttachmentItem]
     @Binding var searchText: String
     @Binding var selection: Set<AttachmentItem.ID>
+    @Binding var selectedAttachment: AttachmentItem?
     @Binding var selectedType: AttachmentType?
     @Binding var selectedPerson: String?
     @Binding var selectedTeam: String?
@@ -156,7 +162,11 @@ private struct AttachmentFolderDetailView: View {
                     teams: teams
                 )
 
-                AttachmentListView(attachments: attachments, selection: $selection)
+                AttachmentListView(
+                    attachments: attachments,
+                    selection: $selection,
+                    selectedAttachment: $selectedAttachment
+                )
             }
             .padding(40)
             .frame(maxWidth: 1_600, alignment: .leading)
@@ -247,6 +257,7 @@ private struct AttachmentFilterMenu<Value: Hashable>: View {
 private struct AttachmentListView: View {
     let attachments: [AttachmentItem]
     @Binding var selection: Set<AttachmentItem.ID>
+    @Binding var selectedAttachment: AttachmentItem?
 
     var body: some View {
         if attachments.isEmpty {
@@ -258,7 +269,8 @@ private struct AttachmentListView: View {
 
                 ForEach(attachments) { attachment in
                     AttachmentRow(attachment: attachment, isSelected: selection.contains(attachment.id)) {
-                        toggleSelection(for: attachment.id)
+                        selection = [attachment.id]
+                        selectedAttachment = attachment
                     }
 
                     if attachment.id != attachments.last?.id {
@@ -270,13 +282,6 @@ private struct AttachmentListView: View {
         }
     }
 
-    private func toggleSelection(for id: AttachmentItem.ID) {
-        if selection.contains(id) {
-            selection.remove(id)
-        } else {
-            selection = [id]
-        }
-    }
 }
 
 private struct AttachmentColumnHeader: View {

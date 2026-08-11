@@ -32,7 +32,16 @@ enum MockData {
             location: "Google Chat > grupo Design",
             team: "Design",
             type: .document,
-            folder: .meetingMinutes
+            folder: .meetingMinutes,
+            details: AttachmentDetails(
+                participants: "Eduarda Vieira e Design",
+                deadline: "09 de agosto, 2026",
+                modality: "Presencial",
+                project: "Identidade Visual",
+                source: "Design / Google Chat",
+                excerpt: "Estamos oficialmente entrando na fase de implementação, que ocorrerá até final de setembro.",
+                notes: "Iniciaremos dia 8 e vamos preparar o último brandbook e os posts de atualização. Aline vai encaminhar os últimos posts ainda esta semana."
+            )
         ),
         AttachmentItem(
             name: "Ata de reunião Atendimento (07/05/26)",
@@ -183,6 +192,9 @@ enum MockData {
     ]
 
     private static let teamTimeline: [TeamActivity] = [
+        TeamActivity(category: .decision, title: "Novo sistema de ticket a ser implementado", detail: "A decisão foi tomada para melhorar o custo-benefício e será implementada até o fim de agosto.", date: "29 de julho, 2026", participants: ["Leonardo Drummond", "Eduarda Vieira"]),
+        TeamActivity(category: .task, title: "Novo sistema de ticket a ser implementado", detail: "Os responsáveis confirmaram ciência e iniciarão a mudança em breve.", date: "29 de julho, 2026", participants: ["Leonardo Drummond", "Eduarda Vieira"]),
+        TeamActivity(category: .meeting, title: "Alinhamento da implementação", detail: "Foram definidos os próximos passos e a comunicação com as equipes.", date: "29 de julho, 2026", participants: ["Leonardo Drummond", "Eduarda Vieira"]),
         TeamActivity(category: .decision, title: "Novo sistema de ticket a ser implementado", detail: "A decisão foi tomada para melhorar o custo-benefício e será implementada até o fim de agosto.", date: "29 de julho, 2026", participants: ["Leonardo Drummond", "Eduarda Vieira"]),
         TeamActivity(category: .task, title: "Novo sistema de ticket a ser implementado", detail: "Os responsáveis confirmaram ciência e iniciarão a mudança em breve.", date: "29 de julho, 2026", participants: ["Leonardo Drummond", "Eduarda Vieira"]),
         TeamActivity(category: .meeting, title: "Alinhamento da implementação", detail: "Foram definidos os próximos passos e a comunicação com as equipes.", date: "29 de julho, 2026", participants: ["Leonardo Drummond", "Eduarda Vieira"])
