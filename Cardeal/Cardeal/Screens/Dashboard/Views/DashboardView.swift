@@ -20,8 +20,7 @@ struct DashboardView: View {
     @State private var selectedDestination: SidebarDestination? = .dashboard
     @State private var selectedTab: FilterTab = MockData.filterTabs.first!
     @State private var searchText: String = ""
-    @State private var weekRangeText: String = "26 de julho a 01 de agosto, 2026"
-
+    @State private var selectedWeek = WeekRange(start: Date())
     var body: some View {
         NavigationSplitView(columnVisibility: $columnVisibility) {
             SidebarView(selection: $selectedDestination)
@@ -30,7 +29,7 @@ struct DashboardView: View {
             SidebarDetailView(
                 selection: selectedDestination,
                 searchText: $searchText,
-                weekRangeText: $weekRangeText,
+                selectedWeek: $selectedWeek,
                 selectedTab: $selectedTab
             )
         }
@@ -43,7 +42,7 @@ struct DashboardView: View {
 private struct SidebarDetailView: View {
     let selection: SidebarDestination?
     @Binding var searchText: String
-    @Binding var weekRangeText: String
+    @Binding var selectedWeek: WeekRange
     @Binding var selectedTab: FilterTab
 
     @ViewBuilder
@@ -52,7 +51,7 @@ private struct SidebarDetailView: View {
         case .dashboard:
             DashboardContentView(
                 searchText: $searchText,
-                weekRangeText: $weekRangeText,
+                selectedWeek: $selectedWeek,
                 selectedTab: $selectedTab
             )
         case .timeline:
@@ -72,7 +71,7 @@ private struct SidebarDetailView: View {
 
 struct DashboardContentView: View {
     @Binding var searchText: String
-    @Binding var weekRangeText: String
+    @Binding var selectedWeek: WeekRange
     @Binding var selectedTab: FilterTab
 
     var body: some View {
@@ -80,7 +79,7 @@ struct DashboardContentView: View {
             VStack(alignment: .leading, spacing: 24) {
                 GreetingHeaderView(name: "Fabíola")
 
-                WeekNavigatorView(rangeText: $weekRangeText)
+                WeekNavigatorView(selection: $selectedWeek)
 
                 HStack(alignment: .center, spacing: 16) {
                     FilterTabsView(tabs: MockData.filterTabs, selection: $selectedTab)
@@ -123,22 +122,36 @@ struct GreetingHeaderView: View {
 // MARK: - Navegador de semana
 
 struct WeekNavigatorView: View {
-    @Binding var rangeText: String
+    @Binding var selection: WeekRange
+    @State private var showCalendar = false
+
+    private let calendar = Calendar.dashboard
 
     var body: some View {
         HStack(spacing: 12) {
             Button {
-                // Ação: semana anterior
+                moveWeek(by: -1)
             } label: {
                 Image(systemName: "chevron.left")
             }
             .buttonStyle(.plain)
 
-            Text(rangeText)
+            Button {
+                showCalendar.toggle()
+            } label: {
+                Text(selectedWeekText)
                 .font(.title3.weight(.medium))
+            }
+            .buttonStyle(.plain)
+            .popover(isPresented: $showCalendar, arrowEdge: .top) {
+                WeekRangePicker(selection: $selection) {
+                    showCalendar = false
+                }
+                .padding(8)
+            }
 
             Button {
-                // Ação: próxima semana
+                moveWeek(by: 1)
             } label: {
                 Image(systemName: "chevron.right")
             }
@@ -146,20 +159,57 @@ struct WeekNavigatorView: View {
         }
         .foregroundStyle(.blue)
     }
+    private var selectedWeekText: String {
+        let start = selection.start.formatted(.dateTime.locale(Locale(identifier: "pt_BR")).day().month(.abbreviated))
+        let end = selection.end.formatted(.dateTime.locale(Locale(identifier: "pt_BR")).day().month(.abbreviated).year())
+        return "\(start) - \(end)"
+    }
+
+    private func moveWeek(by value: Int) {
+        guard let date = calendar.date(byAdding: .weekOfYear, value: value, to: selection.start) else { return }
+        selection = WeekRange(start: date, calendar: calendar)
+    }
 }
 
 
 // MARK: - Botões de ação da toolbar (filtro, ordenar, atualizar, novo item)
 
 struct ToolbarActionsView: View {
+    @State private var isSortPopoverPresented = false
+    @State private var isFilterPopoverPresented = false
+    @State private var sortOption: SortOption = .oldest
+    @State private var selectedPeople: Set<String> = ["Leonardo Drummond", "Eduarda Vieira"]
+    @State private var selectedSubjects: Set<String> = ["Pagamentos", "Entregas"]
+
     var body: some View {
         GlassEffectContainerCompat(spacing: 8) {
             HStack(spacing: 8) {
-                GlassIconButton(systemImage: "line.3.horizontal.decrease") {
-                    // Ação: filtrar
+                DashboardToolbarIconButton(systemImage: "arrow.up.arrow.down", accessibilityLabel: "Ordenar") {
+                    isSortPopoverPresented.toggle()
+                    isFilterPopoverPresented = false
+                }.popover(
+                    isPresented: $isSortPopoverPresented,
+                    attachmentAnchor: .rect(.bounds),
+                    arrowEdge: .top
+                ) {
+                    SortPopover(
+                        selection: $sortOption
+                    )
                 }
-                GlassIconButton(systemImage: "arrow.up.arrow.down") {
-                    // Ação: ordenar
+                
+                DashboardToolbarIconButton(systemImage: "line.3.horizontal.decrease", accessibilityLabel: "Filtrar") {
+                    isFilterPopoverPresented.toggle()
+                    isSortPopoverPresented = false
+                }
+                .popover(
+                    isPresented: $isFilterPopoverPresented,
+                    attachmentAnchor: .rect(.bounds),
+                    arrowEdge: .top
+                ) {
+                    FilterPopover(
+                        selectedPeople: $selectedPeople,
+                        selectedSubjects: $selectedSubjects
+                    )
                 }
                 GlassLabeledButton(title: "Atualizar", systemImage: "arrow.clockwise") {
                     // Ação: atualizar
@@ -172,19 +222,22 @@ struct ToolbarActionsView: View {
     }
 }
 
-private struct GlassIconButton: View {
+private struct DashboardToolbarIconButton: View {
     let systemImage: String
+    let accessibilityLabel: String
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
             Image(systemName: systemImage)
-                .font(.system(size: 14, weight: .medium))
+                .font(.system(size: 19, weight: .medium))
                 .foregroundStyle(.white)
-                .frame(width: 36, height: 36)
+                .frame(width: 50, height: 50)
         }
         .buttonStyle(.plain)
-        .modifier(GlassPillModifier(tint: .accentColor, isSelected: true, cornerRadius: 18))
+        .background(Circle().fill(.blue))
+        .shadow(color: .blue.opacity(0.2), radius: 8, y: 3)
+        .accessibilityLabel(accessibilityLabel)
     }
 }
 

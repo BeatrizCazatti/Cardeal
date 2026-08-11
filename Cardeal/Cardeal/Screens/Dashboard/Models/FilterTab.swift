@@ -1,9 +1,4 @@
-//
-//  FilterTab.swift
-//  Cardeal
-//
-//  Created by Beatriz Cazatti on 05/08/26.
-//
+
 import SwiftUI
 
 
