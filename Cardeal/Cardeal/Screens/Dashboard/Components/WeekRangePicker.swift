@@ -112,14 +112,18 @@ private extension WeekRangePicker {
         } label: {
             ZStack {
                 if isSelected {
-                    Rectangle().fill(Color.blue.opacity(0.12)).frame(height: 42)
+                    Rectangle()
+                        .fill(Color.primaryAction.opacity(0.12))
+                        .frame(height: 42)
                 }
                 if isStart || isEnd {
-                    Circle().fill(.blue).frame(width: 42, height: 42)
+                    Circle()
+                        .fill(.primaryAction)
+                        .frame(width: 42, height: 42)
                 }
                 Text(day.date.formatted(.dateTime.day()))
                     .font(.system(size: 20, weight: .regular))
-                    .foregroundStyle(isStart || isEnd ? .white : (day.belongsToDisplayedMonth ? .primary : .secondary.opacity(0.55)))
+                    .foregroundStyle(isStart || isEnd ? .white : (day.belongsToDisplayedMonth ? .primaryText : .secondaryText.opacity(0.55)))
             }
             .frame(maxWidth: .infinity, minHeight: 54)
             .contentShape(Rectangle())

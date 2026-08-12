@@ -235,8 +235,8 @@ private struct DashboardToolbarIconButton: View {
                 .frame(width: 50, height: 50)
         }
         .buttonStyle(.plain)
-        .background(Circle().fill(.blue))
-        .shadow(color: .blue.opacity(0.2), radius: 8, y: 3)
+        .background(Circle().fill(.primaryAction))
+        .shadow(color: .primaryAction.opacity(0.2), radius: 8, y: 3)
         .accessibilityLabel(accessibilityLabel)
     }
 }
@@ -255,7 +255,7 @@ private struct GlassLabeledButton: View {
                     .font(.subheadline.weight(.semibold))
             }
             // Usa .white se for proeminente, senão .primary para se adaptar ao tema
-            .foregroundStyle(prominent ? Color.white : Color.primary)
+            .foregroundStyle(prominent ? Color.primaryAction : Color.secondaryAction)
             .padding(.vertical, 8)
             .padding(.horizontal, 14)
         }
@@ -300,7 +300,7 @@ struct BoardColumnView: View {
             Button(action: onSelectTeam) {
                 Text(column.title)
                     .font(.headline)
-                    .foregroundStyle(.blue)
+                    .foregroundStyle(.primaryText)
                 Spacer()
                 Image(systemName: "arrow.down.left.and.arrow.up.right")
             }
@@ -326,10 +326,10 @@ struct EmptyColumnView: View {
         VStack(spacing: 12) {
             Image(systemName: "wind")
                 .font(.system(size: 32, weight: .light))
-                .foregroundStyle(.secondary)
+                .foregroundStyle(.secondaryText)
             Text("Tudo calmo por aqui!")
                 .font(.subheadline)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(.secondaryText)
         }
         .frame(maxWidth: .infinity, minHeight: 160)
         .padding(.top, 24)
@@ -347,7 +347,7 @@ struct BoardItemCardView: View {
             HStack(alignment: .top) {
                 Text(item.title)
                     .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.primary)
+                    .foregroundStyle(.primaryText)
                     .fixedSize(horizontal: false, vertical: true)
 
                 Spacer(minLength: 8)
@@ -372,7 +372,7 @@ struct BoardItemCardView: View {
             if let description = item.descriptionText {
                 Text(description)
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.secondaryText)
                     .fixedSize(horizontal: false, vertical: true)
             }
 
@@ -416,10 +416,10 @@ private struct MetadataRow: View {
         HStack(spacing: 6) {
             Image(systemName: systemImage)
                 .font(.caption)
-                .foregroundStyle(.blue)
+                .foregroundStyle(.iconsDashboard)
             Text(text)
                 .font(.caption.weight(highlighted ? .semibold : .regular))
-                .foregroundStyle(highlighted ? .red : .secondary)
+                .foregroundStyle(highlighted ? .changeText : .secondaryText)
         }
     }
 }

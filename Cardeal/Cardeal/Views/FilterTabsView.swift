@@ -162,6 +162,8 @@ struct CountBadge: View {
             .font(.caption2.weight(.bold))
             .foregroundStyle(.white)
             .frame(width: 20, height: 20)
-            .background(Circle().fill(Color.red.gradient))
+            .background(Circle().fill(Color.counterBadge.gradient))
     }
 }
+
+
