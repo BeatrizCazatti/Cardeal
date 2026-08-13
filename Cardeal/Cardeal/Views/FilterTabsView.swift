@@ -62,6 +62,7 @@ struct FilterTabsView: View {
                         .frame(width: pillFrame.width, height: pillFrame.height)
                         .offset(x: pillFrame.minX, y: pillFrame.minY)
                         .allowsHitTesting(false)
+                        .zIndex(0)
                 }
 
                 HStack(spacing: 2) {
@@ -79,6 +80,7 @@ struct FilterTabsView: View {
                         )
                     }
                 }
+                .zIndex(1)
             }
             .padding(4)
         }
