@@ -137,7 +137,9 @@ private struct FilterTabButton: View {
     var body: some View {
         Button(action: action) {
             HStack(spacing: 6) {
-                CountBadge(count: tab.count)
+                if tab.count > 0 {
+                    CountBadge(count: tab.count)
+                }
                 Text(tab.title)
                     .font(.subheadline.weight(isSelected ? .semibold : .regular))
                     .foregroundStyle(isSelected ? .primary : .secondary)
@@ -165,5 +167,4 @@ struct CountBadge: View {
             .background(Circle().fill(Color.counterBadge.gradient))
     }
 }
-
 

@@ -10,11 +10,11 @@ enum MockData {
     ]
 
     static let filterTabs: [FilterTab] = [
-        FilterTab(title: "Geral", count: 2),
-        FilterTab(title: "Reuniões", count: 2),
-        FilterTab(title: "Tarefas", count: 1),
-        FilterTab(title: "Mudanças", count: 1),
-        FilterTab(title: "Decisões", count: 4)
+        FilterTab(title: "Geral", count: 3),
+        FilterTab(title: "Reuniões", count: 1, category: .meeting),
+        FilterTab(title: "Tarefas", count: 1, category: .task),
+        FilterTab(title: "Mudanças", count: 0, category: .change),
+        FilterTab(title: "Decisões", count: 1, category: .decision)
     ]
 
     static let attachments: [AttachmentItem] = [
@@ -117,14 +117,16 @@ enum MockData {
                     title: "Criação de post para Instagram",
                     badgeCount: 1,
                     assignees: [Assignee(name: "Aline (Design)", isGroup: false)],
-                    dateText: "Amanhã - 17h"
+                    dateText: "Amanhã - 17h",
+                    category: .task
                 ),
                 BoardItem(
                     title: "Onboarding de nova ferramenta",
                     badgeCount: 1,
                     assignees: [Assignee(name: "Fabíola Machado & Atendimento", isGroup: true)],
                     dateText: "Amanhã - 17h",
-                    location: "Presencial"
+                    location: "Presencial",
+                    category: .meeting
                 )
             ]
         ),
@@ -134,14 +136,16 @@ enum MockData {
                 BoardItem(
                     title: "Criação de post para Instagram",
                     assignees: [Assignee(name: "Aline (Design)", isGroup: false)],
-                    dateText: "Amanhã - 17h"
+                    dateText: "Amanhã - 17h",
+                    category: .meeting
                 ),
                 BoardItem(
                     title: "Onboarding de nova ferramenta",
                     assignees: [Assignee(name: "Fabíola Machado & Atendimento", isGroup: true)],
                     dateText: "Amanhã - 17h",
                     isRescheduled: true,
-                    location: "Presencial"
+                    location: "Presencial",
+                    category: .change
                 )
             ]
         ),
@@ -150,8 +154,16 @@ enum MockData {
             items: [
                 BoardItem(
                     title: "Novo sistema de ticket a ser implementado",
+                    badgeCount: 1,
                     assignees: [Assignee(name: "Fabíola Machado & RH", isGroup: true)],
-                    descriptionText: "A decisão foi feita por motivos de melhora no custo-benefício e será implementada até o fim de agosto."
+                    descriptionText: "A decisão foi feita por motivos de melhora no custo-benefício e será implementada até o fim de agosto.",
+                    category: .decision
+                ),
+                BoardItem(
+                    title: "Aprovação do orçamento trimestral",
+                    assignees: [Assignee(name: "Fabíola Machado", isGroup: false)],
+                    descriptionText: "O orçamento foi aprovado para a execução das iniciativas prioritárias.",
+                    category: .decision
                 )
             ]
         ),

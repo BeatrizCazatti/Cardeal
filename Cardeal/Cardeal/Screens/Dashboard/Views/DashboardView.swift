@@ -19,6 +19,10 @@ struct DashboardView: View {
     @State private var columnVisibility: NavigationSplitViewVisibility = .automatic
     @State private var selectedDestination: SidebarDestination? = .dashboard
     @State private var selectedTab: FilterTab = MockData.filterTabs.first!
+    @State private var filterTabs = MockData.filterTabs
+    @State private var columns = MockData.columns
+    @State private var archivedItem: ArchivedBoardItem?
+    @State private var isArchiveUndoPresented = false
     @State private var searchText: String = ""
     @State private var selectedWeek = WeekRange(start: Date())
     var body: some View {
@@ -30,11 +34,83 @@ struct DashboardView: View {
                 selection: selectedDestination,
                 searchText: $searchText,
                 selectedWeek: $selectedWeek,
-                selectedTab: $selectedTab
+                selectedTab: $selectedTab,
+                filterTabs: filterTabs,
+                columns: columns,
+                markAsReviewed: markAsReviewed,
+                updateItem: updateItem,
+                archiveItem: archiveItem,
+                deleteItem: deleteItem,
+                createItem: createItem
             )
         }
         .navigationSplitViewStyle(.balanced)
+        .alert("Card arquivado", isPresented: $isArchiveUndoPresented) {
+            Button("Desfazer") {
+                restoreArchivedItem()
+            }
+            Button("OK", role: .cancel) {
+                archivedItem = nil
+            }
+        } message: {
+            Text("O card foi removido do board.")
+        }
     }
+
+    private func markAsReviewed(itemID: BoardItem.ID, in columnID: BoardColumn.ID) {
+        guard let columnIndex = columns.firstIndex(where: { $0.id == columnID }) else { return }
+
+        columns[columnIndex].markAsReviewed(itemID: itemID)
+        refreshFilterCounts()
+    }
+
+    private func updateItem(itemID: BoardItem.ID, in columnID: BoardColumn.ID, with draft: BoardItemDraft) {
+        guard let columnIndex = columns.firstIndex(where: { $0.id == columnID }) else { return }
+        columns[columnIndex].update(itemID: itemID, with: draft)
+    }
+
+    private func archiveItem(itemID: BoardItem.ID, in columnID: BoardColumn.ID) {
+        guard let columnIndex = columns.firstIndex(where: { $0.id == columnID }),
+              let removedItem = columns[columnIndex].remove(itemID: itemID) else { return }
+
+        archivedItem = ArchivedBoardItem(columnID: columnID, item: removedItem.item, index: removedItem.index)
+        refreshFilterCounts()
+        isArchiveUndoPresented = true
+    }
+
+    private func deleteItem(itemID: BoardItem.ID, in columnID: BoardColumn.ID) {
+        guard let columnIndex = columns.firstIndex(where: { $0.id == columnID }) else { return }
+        _ = columns[columnIndex].remove(itemID: itemID)
+        refreshFilterCounts()
+    }
+
+    private func createItem(draft: BoardItemDraft, in team: String, category: DashboardItemCategory) {
+        guard let columnIndex = columns.firstIndex(where: { $0.title == team }) else { return }
+        columns[columnIndex].items.append(BoardItem(draft: draft, category: category))
+    }
+
+    private func restoreArchivedItem() {
+        guard let archivedItem,
+              let columnIndex = columns.firstIndex(where: { $0.id == archivedItem.columnID }) else { return }
+
+        columns[columnIndex].restore(archivedItem.item, at: archivedItem.index)
+        self.archivedItem = nil
+        refreshFilterCounts()
+    }
+
+    private func refreshFilterCounts() {
+        filterTabs = filterTabs.map { tab in
+            var updatedTab = tab
+            updatedTab.count = columns.reduce(0) { $0 + $1.unreadItemCount(for: tab.category) }
+            return updatedTab
+        }
+    }
+}
+
+private struct ArchivedBoardItem {
+    let columnID: BoardColumn.ID
+    let item: BoardItem
+    let index: Int
 }
 
 // MARK: - Destino da navegação
@@ -44,6 +120,13 @@ private struct SidebarDetailView: View {
     @Binding var searchText: String
     @Binding var selectedWeek: WeekRange
     @Binding var selectedTab: FilterTab
+    let filterTabs: [FilterTab]
+    let columns: [BoardColumn]
+    let markAsReviewed: (BoardItem.ID, BoardColumn.ID) -> Void
+    let updateItem: (BoardItem.ID, BoardColumn.ID, BoardItemDraft) -> Void
+    let archiveItem: (BoardItem.ID, BoardColumn.ID) -> Void
+    let deleteItem: (BoardItem.ID, BoardColumn.ID) -> Void
+    let createItem: (BoardItemDraft, String, DashboardItemCategory) -> Void
 
     @ViewBuilder
     var body: some View {
@@ -52,7 +135,14 @@ private struct SidebarDetailView: View {
             DashboardContentView(
                 searchText: $searchText,
                 selectedWeek: $selectedWeek,
-                selectedTab: $selectedTab
+                selectedTab: $selectedTab,
+                filterTabs: filterTabs,
+                columns: columns,
+                markAsReviewed: markAsReviewed,
+                updateItem: updateItem,
+                archiveItem: archiveItem,
+                deleteItem: deleteItem,
+                createItem: createItem
             )
         case .timeline:
             TimelineView()
@@ -73,6 +163,13 @@ struct DashboardContentView: View {
     @Binding var searchText: String
     @Binding var selectedWeek: WeekRange
     @Binding var selectedTab: FilterTab
+    let filterTabs: [FilterTab]
+    let columns: [BoardColumn]
+    let markAsReviewed: (BoardItem.ID, BoardColumn.ID) -> Void
+    let updateItem: (BoardItem.ID, BoardColumn.ID, BoardItemDraft) -> Void
+    let archiveItem: (BoardItem.ID, BoardColumn.ID) -> Void
+    let deleteItem: (BoardItem.ID, BoardColumn.ID) -> Void
+    let createItem: (BoardItemDraft, String, DashboardItemCategory) -> Void
 
     var body: some View {
         ScrollView {
@@ -82,12 +179,19 @@ struct DashboardContentView: View {
                 WeekNavigatorView(selection: $selectedWeek)
 
                 HStack(alignment: .center, spacing: 16) {
-                    FilterTabsView(tabs: MockData.filterTabs, selection: $selectedTab)
+                    FilterTabsView(tabs: filterTabs, selection: $selectedTab)
                     Spacer(minLength: 12)
-                    ToolbarActionsView()
+                    ToolbarActionsView(teamNames: columns.map(\.title), createItem: createItem)
                 }
 
-                BoardView(columns: MockData.columns)
+                BoardView(
+                    columns: columns,
+                    filter: selectedTab.category,
+                    markAsReviewed: markAsReviewed,
+                    updateItem: updateItem,
+                    archiveItem: archiveItem,
+                    deleteItem: deleteItem
+                )
 
                 FooterView(lastUpdated: "29 de julho, 14:30h")
                     .padding(.top, 8)
@@ -175,48 +279,55 @@ struct WeekNavigatorView: View {
 // MARK: - Botões de ação da toolbar (filtro, ordenar, atualizar, novo item)
 
 struct ToolbarActionsView: View {
+    let teamNames: [String]
+    let createItem: (BoardItemDraft, String, DashboardItemCategory) -> Void
+
     @State private var isSortPopoverPresented = false
     @State private var isFilterPopoverPresented = false
+    @State private var isNewItemPresented = false
     @State private var sortOption: SortOption = .oldest
     @State private var selectedPeople: Set<String> = ["Leonardo Drummond", "Eduarda Vieira"]
     @State private var selectedSubjects: Set<String> = ["Pagamentos", "Entregas"]
 
     var body: some View {
-        GlassEffectContainerCompat(spacing: 8) {
-            HStack(spacing: 8) {
-                DashboardToolbarIconButton(systemImage: "arrow.up.arrow.down", accessibilityLabel: "Ordenar") {
-                    isSortPopoverPresented.toggle()
-                    isFilterPopoverPresented = false
-                }.popover(
-                    isPresented: $isSortPopoverPresented,
-                    attachmentAnchor: .rect(.bounds),
-                    arrowEdge: .top
-                ) {
-                    SortPopover(
-                        selection: $sortOption
-                    )
-                }
-                
-                DashboardToolbarIconButton(systemImage: "line.3.horizontal.decrease", accessibilityLabel: "Filtrar") {
-                    isFilterPopoverPresented.toggle()
-                    isSortPopoverPresented = false
-                }
-                .popover(
-                    isPresented: $isFilterPopoverPresented,
-                    attachmentAnchor: .rect(.bounds),
-                    arrowEdge: .top
-                ) {
-                    FilterPopover(
-                        selectedPeople: $selectedPeople,
-                        selectedSubjects: $selectedSubjects
-                    )
-                }
-                GlassLabeledButton(title: "Atualizar", systemImage: "arrow.clockwise") {
-                    // Ação: atualizar
-                }
-                GlassLabeledButton(title: "Novo item", systemImage: "plus", prominent: true) {
-                    // Ação: novo item
-                }
+        HStack(spacing: 16) {
+            DashboardToolbarIconButton(systemImage: "line.3.horizontal.decrease", accessibilityLabel: "Filtrar") {
+                isFilterPopoverPresented.toggle()
+                isSortPopoverPresented = false
+            }
+            .popover(
+                isPresented: $isFilterPopoverPresented,
+                attachmentAnchor: .rect(.bounds),
+                arrowEdge: .top
+            ) {
+                FilterPopover(
+                    selectedPeople: $selectedPeople,
+                    selectedSubjects: $selectedSubjects
+                )
+            }
+
+            DashboardToolbarIconButton(systemImage: "arrow.up.arrow.down", accessibilityLabel: "Ordenar") {
+                isSortPopoverPresented.toggle()
+                isFilterPopoverPresented = false
+            }
+            .popover(
+                isPresented: $isSortPopoverPresented,
+                attachmentAnchor: .rect(.bounds),
+                arrowEdge: .top
+            ) {
+                SortPopover(selection: $sortOption)
+            }
+
+            DashboardToolbarPrimaryButton(title: "Atualizar", systemImage: "arrow.clockwise") {
+                // Ação: atualizar
+            }
+            DashboardToolbarPrimaryButton(title: "Novo item", systemImage: "plus") {
+                isNewItemPresented = true
+            }
+        }
+        .sheet(isPresented: $isNewItemPresented) {
+            NewBoardItemSheet(teamNames: teamNames) { draft, team, category in
+                createItem(draft, team, category)
             }
         }
     }
@@ -230,37 +341,101 @@ private struct DashboardToolbarIconButton: View {
     var body: some View {
         Button(action: action) {
             Image(systemName: systemImage)
-                .font(.system(size: 19, weight: .medium))
-                .foregroundStyle(.white)
-                .frame(width: 50, height: 50)
+                .font(.system(size: 22, weight: .medium))
+                .foregroundStyle(.secondaryText)
+                .frame(width: 48, height: 48)
         }
         .buttonStyle(.plain)
-        .background(Circle().fill(.primaryAction))
-        .shadow(color: .primaryAction.opacity(0.2), radius: 8, y: 3)
+        .background(Circle().fill(.secondaryAction))
+        .shadow(color: .black.opacity(0.08), radius: 10, y: 4)
         .accessibilityLabel(accessibilityLabel)
     }
 }
 
-private struct GlassLabeledButton: View {
+private struct DashboardToolbarPrimaryButton: View {
     let title: String
     let systemImage: String
-    var prominent: Bool = false
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 6) {
+            HStack(spacing: 10) {
                 Image(systemName: systemImage)
+                    .font(.system(size: 24, weight: .regular))
                 Text(title)
-                    .font(.subheadline.weight(.semibold))
+                    .font(.title3.weight(.regular))
             }
-            // Usa .white se for proeminente, senão .primary para se adaptar ao tema
-            .foregroundStyle(prominent ? Color.primaryAction : Color.secondaryAction)
-            .padding(.vertical, 8)
-            .padding(.horizontal, 14)
+            .foregroundStyle(.white)
+            .frame(height: 48)
+            .padding(.horizontal, 28)
         }
         .buttonStyle(.plain)
-        .modifier(GlassPillModifier(tint: prominent ? .accentColor : nil, isSelected: prominent))
+        .background(Capsule().fill(.primaryAction))
+        .shadow(color: .primaryAction.opacity(0.22), radius: 10, y: 4)
+    }
+}
+
+private struct NewBoardItemSheet: View {
+    let teamNames: [String]
+    let createItem: (BoardItemDraft, String, DashboardItemCategory) -> Void
+
+    @Environment(\.dismiss) private var dismiss
+    @State private var draft = BoardItemDraft()
+    @State private var assigneesText = ""
+    @State private var selectedTeam = ""
+    @State private var selectedCategory: DashboardItemCategory = .meeting
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            Text("Novo item")
+                .font(.title2.weight(.semibold))
+
+            Form {
+                TextField("Título", text: $draft.title)
+                TextField("Responsáveis", text: $assigneesText)
+                TextField("Data", text: $draft.dateText)
+                TextField("Local", text: $draft.location)
+
+                Picker("Time", selection: $selectedTeam) {
+                    ForEach(teamNames, id: \.self) { team in
+                        Text(team).tag(team)
+                    }
+                }
+
+                Picker("Tipo", selection: $selectedCategory) {
+                    ForEach(DashboardItemCategory.allCases, id: \.self) { category in
+                        Text(category.title).tag(category)
+                    }
+                }
+
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Descrição")
+                    TextEditor(text: $draft.description)
+                        .font(.body)
+                        .frame(minHeight: 100)
+                }
+            }
+            .formStyle(.grouped)
+
+            HStack {
+                Spacer()
+                Button("Cancelar", role: .cancel) {
+                    dismiss()
+                }
+                Button("Criar item") {
+                    draft.assignees = assignees(from: assigneesText)
+                    createItem(draft, selectedTeam, selectedCategory)
+                    dismiss()
+                }
+                .keyboardShortcut(.defaultAction)
+                .disabled(draft.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || selectedTeam.isEmpty)
+            }
+        }
+        .padding(24)
+        .frame(width: 460)
+        .onAppear {
+            selectedTeam = teamNames.first ?? ""
+        }
     }
 }
 
@@ -269,15 +444,36 @@ private struct GlassLabeledButton: View {
 
 struct BoardView: View {
     let columns: [BoardColumn]
+    let filter: DashboardItemCategory?
+    let markAsReviewed: (BoardItem.ID, BoardColumn.ID) -> Void
+    let updateItem: (BoardItem.ID, BoardColumn.ID, BoardItemDraft) -> Void
+    let archiveItem: (BoardItem.ID, BoardColumn.ID) -> Void
+    let deleteItem: (BoardItem.ID, BoardColumn.ID) -> Void
     @State private var selectedTeam: TeamDetail?
+    @State private var itemPendingDeletion: PendingDeletion?
 
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             LazyHStack(alignment: .top, spacing: 32) {
-                ForEach(columns) { column in
-                    BoardColumnView(column: column) {
-                        selectedTeam = MockData.teamDetails.first { $0.name == column.title }
-                    }
+                ForEach(columns.map { $0.filtered(by: filter) }) { column in
+                    BoardColumnView(
+                        column: column,
+                        onSelectTeam: {
+                            selectedTeam = MockData.teamDetails.first { $0.name == column.title }
+                        },
+                        markAsReviewed: { itemID in
+                            markAsReviewed(itemID, column.id)
+                        },
+                        updateItem: { itemID, draft in
+                            updateItem(itemID, column.id, draft)
+                        },
+                        archiveItem: { itemID in
+                            archiveItem(itemID, column.id)
+                        },
+                        requestDeletion: { item in
+                            itemPendingDeletion = PendingDeletion(item: item, columnID: column.id)
+                        }
+                    )
                         .frame(width: 320)
                 }
             }
@@ -288,12 +484,34 @@ struct BoardView: View {
         .sheet(item: $selectedTeam) { team in
             TeamDetailSheet(team: team)
         }
+        .alert("Excluir card?", isPresented: Binding(
+            get: { itemPendingDeletion != nil },
+            set: { if !$0 { itemPendingDeletion = nil } }
+        ), presenting: itemPendingDeletion) { pendingDeletion in
+            Button("Excluir", role: .destructive) {
+                deleteItem(pendingDeletion.item.id, pendingDeletion.columnID)
+            }
+            Button("Cancelar", role: .cancel) {}
+        } message: { pendingDeletion in
+            Text("\"\(pendingDeletion.item.title)\" será excluído permanentemente.")
+        }
     }
+}
+
+private struct PendingDeletion: Identifiable {
+    let item: BoardItem
+    let columnID: BoardColumn.ID
+
+    var id: BoardItem.ID { item.id }
 }
 
 struct BoardColumnView: View {
     let column: BoardColumn
     let onSelectTeam: () -> Void
+    let markAsReviewed: (BoardItem.ID) -> Void
+    let updateItem: (BoardItem.ID, BoardItemDraft) -> Void
+    let archiveItem: (BoardItem.ID) -> Void
+    let requestDeletion: (BoardItem) -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -313,7 +531,13 @@ struct BoardColumnView: View {
                 EmptyColumnView()
             } else {
                 ForEach(column.items) { item in
-                    BoardItemCardView(item: item)
+                    BoardItemCardView(
+                        item: item,
+                        markAsReviewed: markAsReviewed,
+                        updateItem: updateItem,
+                        archiveItem: archiveItem,
+                        requestDeletion: requestDeletion
+                    )
                 }
             }
         }
@@ -340,33 +564,61 @@ struct EmptyColumnView: View {
 
 struct BoardItemCardView: View {
     let item: BoardItem
+    let markAsReviewed: (BoardItem.ID) -> Void
+    let updateItem: (BoardItem.ID, BoardItemDraft) -> Void
+    let archiveItem: (BoardItem.ID) -> Void
+    let requestDeletion: (BoardItem) -> Void
     @State private var isHovering = false
+    @State private var isEditing = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            HStack(alignment: .top) {
+            if let badgeCount = item.badgeCount {
+                HStack(alignment: .top) {
+                    CountBadge(count: badgeCount)
+                    Spacer()
+                    UnreadCardActionsView {
+                        isEditing = true
+                    } markAsReviewed: {
+                        markAsReviewed(item.id)
+                    } archive: {
+                        archiveItem(item.id)
+                    } requestDeletion: {
+                        requestDeletion(item)
+                    }
+                }
+
                 Text(item.title)
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(.primaryText)
                     .fixedSize(horizontal: false, vertical: true)
+            } else {
+                HStack(alignment: .top) {
+                    Text(item.title)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.primaryText)
+                        .fixedSize(horizontal: false, vertical: true)
 
-                Spacer(minLength: 8)
+                    Spacer(minLength: 8)
 
-                if let badgeCount = item.badgeCount {
-                    CountBadge(count: badgeCount)
+                    Menu {
+                        Button("Editar", systemImage: "pencil") {
+                            isEditing = true
+                        }
+                        Button("Arquivar", systemImage: "archivebox") {
+                            archiveItem(item.id)
+                        }
+                        Button("Excluir", systemImage: "trash", role: .destructive) {
+                            requestDeletion(item)
+                        }
+                    } label: {
+                        Image(systemName: "ellipsis")
+                            .foregroundStyle(.secondary)
+                            .rotationEffect(.degrees(90))
+                    }
+                    .menuStyle(.borderlessButton)
+                    .fixedSize()
                 }
-
-                Menu {
-                    Button("Editar", systemImage: "pencil") {}
-                    Button("Arquivar", systemImage: "archivebox") {}
-                    Button("Excluir", systemImage: "trash", role: .destructive) {}
-                } label: {
-                    Image(systemName: "ellipsis")
-                        .foregroundStyle(.secondary)
-                        .rotationEffect(.degrees(90))
-                }
-                .menuStyle(.borderlessButton)
-                .fixedSize()
             }
 
             if let description = item.descriptionText {
@@ -400,11 +652,112 @@ struct BoardItemCardView: View {
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
         .modifier(GlassCardModifier())
+        .overlay {
+            if item.badgeCount != nil {
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .stroke(Color.accentColor, style: StrokeStyle(lineWidth: 1, dash: [4, 5]))
+            }
+        }
         .onHover { hovering in
             withAnimation(.easeInOut(duration: 0.15)) { isHovering = hovering }
         }
         .scaleEffect(isHovering ? 1.01 : 1.0)
+        .sheet(isPresented: $isEditing) {
+            BoardItemEditorSheet(item: item) { draft in
+                updateItem(item.id, draft)
+            }
+        }
     }
+}
+
+private struct UnreadCardActionsView: View {
+    let edit: () -> Void
+    let markAsReviewed: () -> Void
+    let archive: () -> Void
+    let requestDeletion: () -> Void
+
+    var body: some View {
+        HStack(spacing: 14) {
+            Button("Editar", systemImage: "pencil", action: edit)
+                .labelStyle(.iconOnly)
+            Button("Marcar como revisado", systemImage: "checkmark", action: markAsReviewed)
+                .labelStyle(.iconOnly)
+            Menu {
+                Button("Editar", systemImage: "pencil", action: edit)
+                Button("Arquivar", systemImage: "archivebox", action: archive)
+                Button("Excluir", systemImage: "trash", role: .destructive, action: requestDeletion)
+            } label: {
+                Image(systemName: "ellipsis")
+                    .rotationEffect(.degrees(90))
+            }
+            .menuStyle(.borderlessButton)
+        }
+        .foregroundStyle(.primaryAction)
+        .buttonStyle(.plain)
+    }
+}
+
+private struct BoardItemEditorSheet: View {
+    let item: BoardItem
+    let save: (BoardItemDraft) -> Void
+
+    @Environment(\.dismiss) private var dismiss
+    @State private var draft: BoardItemDraft
+    @State private var assigneesText: String
+
+    init(item: BoardItem, save: @escaping (BoardItemDraft) -> Void) {
+        self.item = item
+        self.save = save
+        _draft = State(initialValue: BoardItemDraft(item: item))
+        _assigneesText = State(initialValue: item.assignees.map(\.name).joined(separator: ", "))
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            Text("Editar card")
+                .font(.title2.weight(.semibold))
+
+            Form {
+                TextField("Título", text: $draft.title)
+                TextField("Responsáveis", text: $assigneesText)
+                TextField("Data", text: $draft.dateText)
+                TextField("Local", text: $draft.location)
+
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Descrição")
+                    TextEditor(text: $draft.description)
+                        .font(.body)
+                        .frame(minHeight: 100)
+                }
+            }
+            .formStyle(.grouped)
+
+            HStack {
+                Spacer()
+                Button("Cancelar", role: .cancel) {
+                    dismiss()
+                }
+                Button("Salvar") {
+                    draft.assignees = assignees(from: assigneesText)
+                    save(draft)
+                    dismiss()
+                }
+                .keyboardShortcut(.defaultAction)
+                .disabled(draft.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            }
+        }
+        .padding(24)
+        .frame(width: 460)
+    }
+}
+
+private func assignees(from names: String) -> [Assignee] {
+    names
+        .split(separator: ",")
+        .map { name in
+            let trimmedName = name.trimmingCharacters(in: .whitespaces)
+            return Assignee(name: trimmedName, isGroup: trimmedName.contains("&"))
+        }
 }
 
 private struct MetadataRow: View {
