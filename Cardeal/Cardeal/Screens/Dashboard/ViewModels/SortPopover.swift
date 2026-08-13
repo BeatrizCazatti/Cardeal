@@ -15,7 +15,7 @@ struct SortPopover: View {
         VStack(alignment: .leading, spacing: 0) {
 
             Text("Ordenar por")
-                .font(.system(size: 14, weight: .medium))
+                .font(.subheadline.weight(.medium))
                 .foregroundStyle(.primary)
                 .padding(.horizontal, 12)
                 .padding(.top, 12)
@@ -61,19 +61,14 @@ struct SortOptionRow: View {
                         ? "checkmark"
                         : ""
                 )
-                .font(.system(
-                    size: 13,
-                    weight: .semibold
-                ))
+                .font(.subheadline.weight(.semibold))
                 .frame(
                     width: 16,
                     alignment: .center
                 )
 
                 Text(option.title)
-                    .font(.system(
-                    size: 14
-                    ))
+                    .font(.subheadline)
 
                 Spacer()
             }

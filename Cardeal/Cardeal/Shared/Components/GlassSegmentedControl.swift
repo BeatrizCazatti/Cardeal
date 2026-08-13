@@ -24,7 +24,7 @@ struct GlassSegmentedControl: View {
                     }
                 } label: {
                     Text(tab.title)
-                        .font(.system(size: 15, weight: selection == index ? .semibold : .regular))
+                        .font(.subheadline.weight(selection == index ? .semibold : .regular))
                         .foregroundStyle(selection == index ? .primary : .secondary)
                         .lineLimit(1)
                         .padding(.vertical, 8)

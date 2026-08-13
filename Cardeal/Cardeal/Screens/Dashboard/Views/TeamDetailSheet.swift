@@ -264,7 +264,7 @@ private struct TeamMemberAvatar: View {
             .fill(highlighted ? Color.accentColor : Color.secondary.opacity(0.20))
             .overlay {
                 Text(member.initials)
-                    .font(.system(size: size * 0.28, weight: .semibold))
+                    .font(.title3.weight(.semibold))
                     .foregroundStyle(highlighted ? .white : .primary)
             }
             .frame(width: size, height: size)

@@ -104,7 +104,7 @@ private struct AttachmentFolderTile: View {
         Button(action: action) {
             VStack(alignment: .leading, spacing: 10) {
                 Image(systemName: "folder.fill")
-                    .font(.system(size: 52))
+                    .font(.largeTitle)
                     .symbolRenderingMode(.hierarchical)
                     .foregroundStyle(.blue)
                 Text(folder.rawValue)

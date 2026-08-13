@@ -25,7 +25,7 @@ struct FilterPopover: View {
         VStack(alignment: .leading, spacing: 0) {
 
             Text("Filtrar por")
-                .font(.system(size: 14, weight: .medium))
+                .font(.subheadline.weight(.medium))
                 .foregroundStyle(.primary)
 
             Divider()
@@ -65,7 +65,7 @@ private extension FilterPopover {
         ) {
 
             Text(title)
-                .font(.system(size: 14, weight: .medium))
+                .font(.subheadline.weight(.medium))
 
             content()
         }
@@ -161,10 +161,7 @@ struct FilterChip: View {
                     Image(
                         systemName: "xmark"
                     )
-                    .font(.system(
-                        size: 8,
-                        weight: .medium
-                    ))
+                    .font(.caption2.weight(.medium))
                     .foregroundStyle(
                         .secondary
                     )
@@ -190,10 +187,7 @@ struct FilterChip: View {
                 }
 
                 Text(title)
-                    .font(.system(
-                        size: 11,
-                        weight: .regular
-                    ))
+                    .font(.caption)
                     .lineLimit(1)
             }
             .padding(.horizontal, 8)

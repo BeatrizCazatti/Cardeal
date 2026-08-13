@@ -21,7 +21,9 @@ struct DashboardView: View {
     @State private var selectedTab: FilterTab = MockData.filterTabs.first!
     @State private var filterTabs = MockData.filterTabs
     @State private var columns = MockData.columns
-    @State private var archivedItem: ArchivedBoardItem?
+    @State private var archivedItems: [StoredBoardItem] = []
+    @State private var deletedItems: [StoredBoardItem] = []
+    @State private var archivedItem: StoredBoardItem?
     @State private var isArchiveUndoPresented = false
     @State private var searchText: String = ""
     @State private var selectedWeek = WeekRange(start: Date())
@@ -37,6 +39,8 @@ struct DashboardView: View {
                 selectedTab: $selectedTab,
                 filterTabs: filterTabs,
                 columns: columns,
+                archivedItems: archivedItems,
+                deletedItems: deletedItems,
                 markAsReviewed: markAsReviewed,
                 updateItem: updateItem,
                 archiveItem: archiveItem,
@@ -45,6 +49,7 @@ struct DashboardView: View {
             )
         }
         .navigationSplitViewStyle(.balanced)
+        .onAppear(perform: purgeExpiredDeletedItems)
         .alert("Card arquivado", isPresented: $isArchiveUndoPresented) {
             Button("Desfazer") {
                 restoreArchivedItem()
@@ -73,14 +78,17 @@ struct DashboardView: View {
         guard let columnIndex = columns.firstIndex(where: { $0.id == columnID }),
               let removedItem = columns[columnIndex].remove(itemID: itemID) else { return }
 
-        archivedItem = ArchivedBoardItem(columnID: columnID, item: removedItem.item, index: removedItem.index)
+        archivedItem = StoredBoardItem(columnID: columnID, teamName: columns[columnIndex].title, item: removedItem.item, index: removedItem.index, storedAt: Date())
+        archivedItems.append(archivedItem!)
         refreshFilterCounts()
         isArchiveUndoPresented = true
     }
 
     private func deleteItem(itemID: BoardItem.ID, in columnID: BoardColumn.ID) {
-        guard let columnIndex = columns.firstIndex(where: { $0.id == columnID }) else { return }
-        _ = columns[columnIndex].remove(itemID: itemID)
+        guard let columnIndex = columns.firstIndex(where: { $0.id == columnID }),
+              let removedItem = columns[columnIndex].remove(itemID: itemID) else { return }
+        deletedItems.append(StoredBoardItem(columnID: columnID, teamName: columns[columnIndex].title, item: removedItem.item, index: removedItem.index, storedAt: Date()))
+        purgeExpiredDeletedItems()
         refreshFilterCounts()
     }
 
@@ -94,23 +102,41 @@ struct DashboardView: View {
               let columnIndex = columns.firstIndex(where: { $0.id == archivedItem.columnID }) else { return }
 
         columns[columnIndex].restore(archivedItem.item, at: archivedItem.index)
+        archivedItems.removeAll { $0.id == archivedItem.id }
         self.archivedItem = nil
         refreshFilterCounts()
     }
 
     private func refreshFilterCounts() {
+        purgeExpiredDeletedItems()
         filterTabs = filterTabs.map { tab in
             var updatedTab = tab
-            updatedTab.count = columns.reduce(0) { $0 + $1.unreadItemCount(for: tab.category) }
+            switch tab.destination {
+            case let .active(category):
+                updatedTab.count = columns.reduce(0) { $0 + $1.unreadItemCount(for: category) }
+            case .archived:
+                updatedTab.count = archivedItems.count
+            case .deleted:
+                updatedTab.count = deletedItems.count
+            }
             return updatedTab
         }
     }
+
+    private func purgeExpiredDeletedItems() {
+        let expirationDate = Calendar.current.date(byAdding: .day, value: -7, to: Date()) ?? Date()
+        deletedItems.removeAll { $0.storedAt < expirationDate }
+    }
 }
 
-private struct ArchivedBoardItem {
+struct StoredBoardItem: Identifiable {
     let columnID: BoardColumn.ID
+    let teamName: String
     let item: BoardItem
     let index: Int
+    let storedAt: Date
+
+    var id: BoardItem.ID { item.id }
 }
 
 // MARK: - Destino da navegação
@@ -122,6 +148,8 @@ private struct SidebarDetailView: View {
     @Binding var selectedTab: FilterTab
     let filterTabs: [FilterTab]
     let columns: [BoardColumn]
+    let archivedItems: [StoredBoardItem]
+    let deletedItems: [StoredBoardItem]
     let markAsReviewed: (BoardItem.ID, BoardColumn.ID) -> Void
     let updateItem: (BoardItem.ID, BoardColumn.ID, BoardItemDraft) -> Void
     let archiveItem: (BoardItem.ID, BoardColumn.ID) -> Void
@@ -138,6 +166,8 @@ private struct SidebarDetailView: View {
                 selectedTab: $selectedTab,
                 filterTabs: filterTabs,
                 columns: columns,
+                archivedItems: archivedItems,
+                deletedItems: deletedItems,
                 markAsReviewed: markAsReviewed,
                 updateItem: updateItem,
                 archiveItem: archiveItem,
@@ -165,6 +195,8 @@ struct DashboardContentView: View {
     @Binding var selectedTab: FilterTab
     let filterTabs: [FilterTab]
     let columns: [BoardColumn]
+    let archivedItems: [StoredBoardItem]
+    let deletedItems: [StoredBoardItem]
     let markAsReviewed: (BoardItem.ID, BoardColumn.ID) -> Void
     let updateItem: (BoardItem.ID, BoardColumn.ID, BoardItemDraft) -> Void
     let archiveItem: (BoardItem.ID, BoardColumn.ID) -> Void
@@ -184,14 +216,7 @@ struct DashboardContentView: View {
                     ToolbarActionsView(teamNames: columns.map(\.title), createItem: createItem)
                 }
 
-                BoardView(
-                    columns: columns,
-                    filter: selectedTab.category,
-                    markAsReviewed: markAsReviewed,
-                    updateItem: updateItem,
-                    archiveItem: archiveItem,
-                    deleteItem: deleteItem
-                )
+                dashboardBoard
 
                 FooterView(lastUpdated: "29 de julho, 14:30h")
                     .padding(.top, 8)
@@ -206,6 +231,25 @@ struct DashboardContentView: View {
             }
         }
         .navigationTitle("")
+    }
+
+    @ViewBuilder
+    private var dashboardBoard: some View {
+        switch selectedTab.destination {
+        case let .active(category):
+            BoardView(
+                columns: columns,
+                filter: category,
+                markAsReviewed: markAsReviewed,
+                updateItem: updateItem,
+                archiveItem: archiveItem,
+                deleteItem: deleteItem
+            )
+        case .archived:
+            StoredItemsBoardView(items: archivedItems, title: "Arquivado em")
+        case .deleted:
+            StoredItemsBoardView(items: deletedItems, title: "Excluído em")
+        }
     }
 }
 
@@ -234,7 +278,7 @@ struct WeekNavigatorView: View {
     var body: some View {
         HStack(spacing: 12) {
             Button {
-                moveWeek(by: -1)
+                movePeriod(by: -1)
             } label: {
                 Image(systemName: "chevron.left")
             }
@@ -248,14 +292,11 @@ struct WeekNavigatorView: View {
             }
             .buttonStyle(.plain)
             .popover(isPresented: $showCalendar, arrowEdge: .top) {
-                WeekRangePicker(selection: $selection) {
-                    showCalendar = false
-                }
-                .padding(8)
+                WeekRangePicker(selection: $selection)
             }
 
             Button {
-                moveWeek(by: 1)
+                movePeriod(by: 1)
             } label: {
                 Image(systemName: "chevron.right")
             }
@@ -269,9 +310,10 @@ struct WeekNavigatorView: View {
         return "\(start) - \(end)"
     }
 
-    private func moveWeek(by value: Int) {
-        guard let date = calendar.date(byAdding: .weekOfYear, value: value, to: selection.start) else { return }
-        selection = WeekRange(start: date, calendar: calendar)
+    private func movePeriod(by value: Int) {
+        guard let start = calendar.date(byAdding: .day, value: value, to: selection.start),
+              let end = calendar.date(byAdding: .day, value: value, to: selection.end) else { return }
+        selection = WeekRange(start: start, end: end, calendar: calendar)
     }
 }
 
@@ -341,7 +383,7 @@ private struct DashboardToolbarIconButton: View {
     var body: some View {
         Button(action: action) {
             Image(systemName: systemImage)
-                .font(.system(size: 22, weight: .medium))
+                .font(.title3.weight(.medium))
                 .foregroundStyle(.secondaryText)
                 .frame(width: 48, height: 48)
         }
@@ -361,7 +403,7 @@ private struct DashboardToolbarPrimaryButton: View {
         Button(action: action) {
             HStack(spacing: 10) {
                 Image(systemName: systemImage)
-                    .font(.system(size: 24, weight: .regular))
+                    .font(.title2.weight(.regular))
                 Text(title)
                     .font(.title3.weight(.regular))
             }
@@ -498,6 +540,91 @@ struct BoardView: View {
     }
 }
 
+private struct StoredItemsBoardView: View {
+    let items: [StoredBoardItem]
+    let title: String
+
+    var body: some View {
+        if items.isEmpty {
+            ContentUnavailableView(
+                "Nenhum card \(title.lowercased())",
+                systemImage: "tray"
+            )
+            .frame(maxWidth: .infinity, minHeight: 220)
+        } else {
+            ScrollView(.horizontal, showsIndicators: false) {
+                LazyHStack(alignment: .top, spacing: 32) {
+                    ForEach(teamNames, id: \.self) { teamName in
+                        let teamItems = items.filter { $0.teamName == teamName }
+                        if !teamItems.isEmpty {
+                            StoredItemsColumnView(teamName: teamName, items: teamItems, timestampTitle: title)
+                                .frame(width: 320)
+                        }
+                    }
+                }
+                .padding(.horizontal)
+                .padding(.bottom)
+            }
+            .scrollClipDisabled()
+        }
+    }
+
+    private var teamNames: [String] {
+        Array(Set(items.map(\.teamName))).sorted()
+    }
+}
+
+private struct StoredItemsColumnView: View {
+    let teamName: String
+    let items: [StoredBoardItem]
+    let timestampTitle: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(teamName)
+                .font(.headline)
+                .foregroundStyle(.primaryText)
+            Divider()
+            ForEach(items) { storedItem in
+                StoredBoardItemCard(item: storedItem, timestampTitle: timestampTitle)
+            }
+        }
+    }
+}
+
+private struct StoredBoardItemCard: View {
+    let item: StoredBoardItem
+    let timestampTitle: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(item.item.title)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.primaryText)
+            if let description = item.item.descriptionText {
+                Text(description)
+                    .font(.caption)
+                    .foregroundStyle(.secondaryText)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            if !item.item.assignees.isEmpty {
+                Text(item.item.assignees.map(\.name).joined(separator: ", "))
+                    .font(.caption)
+                    .foregroundStyle(.secondaryText)
+            }
+            Label(
+                "\(timestampTitle) \(item.storedAt.formatted(.dateTime.day().month(.abbreviated).year().hour().minute()))",
+                systemImage: "calendar"
+            )
+            .font(.caption)
+            .foregroundStyle(.secondaryText)
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .modifier(GlassCardModifier())
+    }
+}
+
 private struct PendingDeletion: Identifiable {
     let item: BoardItem
     let columnID: BoardColumn.ID
@@ -549,7 +676,7 @@ struct EmptyColumnView: View {
     var body: some View {
         VStack(spacing: 12) {
             Image(systemName: "wind")
-                .font(.system(size: 32, weight: .light))
+                .font(.largeTitle.weight(.light))
                 .foregroundStyle(.secondaryText)
             Text("Tudo calmo por aqui!")
                 .font(.subheadline)

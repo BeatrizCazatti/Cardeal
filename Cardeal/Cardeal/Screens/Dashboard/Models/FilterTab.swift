@@ -18,18 +18,28 @@ enum DashboardItemCategory: String, CaseIterable, Hashable {
     }
 }
 
+enum DashboardTabDestination: Hashable {
+    case active(DashboardItemCategory?)
+    case archived
+    case deleted
+}
+
 /// Uma aba de filtro no topo (ex.: "Geral", "Reuniões"...), com contador.
 struct FilterTab: Identifiable, Hashable {
     let id = UUID()
     let title: String
     var count: Int
-    /// `nil` representa a aba Geral, que exibe todos os itens.
-    let category: DashboardItemCategory?
+    let destination: DashboardTabDestination
 
-    init(title: String, count: Int, category: DashboardItemCategory? = nil) {
+    var category: DashboardItemCategory? {
+        guard case let .active(category) = destination else { return nil }
+        return category
+    }
+
+    init(title: String, count: Int, destination: DashboardTabDestination = .active(nil)) {
         self.title = title
         self.count = count
-        self.category = category
+        self.destination = destination
     }
 
     static func == (lhs: FilterTab, rhs: FilterTab) -> Bool {

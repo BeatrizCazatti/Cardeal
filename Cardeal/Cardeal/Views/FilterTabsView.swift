@@ -146,7 +146,8 @@ private struct FilterTabButton: View {
                     .lineLimit(1)
             }
             .padding(.vertical, 8)
-            .padding(.horizontal, 14)
+            .padding(.horizontal, 10)
+            .frame(maxWidth: .infinity)
             .contentShape(.capsule)
         }
         .buttonStyle(.plain)
