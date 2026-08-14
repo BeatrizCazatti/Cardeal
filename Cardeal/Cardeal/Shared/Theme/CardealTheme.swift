@@ -1,8 +1,8 @@
 import SwiftUI
 
 extension Color {
-    static let cardealPurple = Color(red: 0.36, green: 0.24, blue: 0.82)
     static let cardealBlue = Color(red: 0.16, green: 0.43, blue: 0.89)
+    static let cardealPurple = Color(red: 0.36, green: 0.24, blue: 0.82)
     static let cardealGreen = Color(red: 0.04, green: 0.55, blue: 0.41)
     static let cardealOrange = Color(red: 0.88, green: 0.39, blue: 0.13)
     static let cardealPink = Color(red: 0.94, green: 0.86, blue: 0.99)

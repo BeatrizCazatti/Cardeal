@@ -4,7 +4,8 @@ import SwiftUI
 struct CardealApp: App {
     var body: some Scene {
         WindowGroup {
-            WeeklyBriefingDashboard()
+            //TesteView()
+            DashboardView()
         }
     }
 }

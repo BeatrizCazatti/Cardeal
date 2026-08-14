@@ -134,3 +134,4 @@ extension DocumentRecord {
         DocumentRecord(title: "Proposta comercial — Orion", detail: "Vinculado ao projeto • atualizado hoje")
     ]
 }
+
