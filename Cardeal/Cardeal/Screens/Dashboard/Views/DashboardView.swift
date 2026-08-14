@@ -174,8 +174,6 @@ private struct SidebarDetailView: View {
                 deleteItem: deleteItem,
                 createItem: createItem
             )
-        case .timeline:
-            TimelineView()
         case .attachments:
             AttachmentsView()
         case nil:
