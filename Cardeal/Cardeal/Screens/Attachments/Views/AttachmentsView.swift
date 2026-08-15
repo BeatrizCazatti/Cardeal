@@ -54,7 +54,7 @@ struct AttachmentsView: View {
                     onNavigateBack: navigateToRoot
                 )
             } else {
-                AttachmentFolderGridView(onSelect: select)
+                AttachmentFolderGridView(searchText: $searchText, onSelect: select)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -84,21 +84,39 @@ struct AttachmentsView: View {
 }
 
 private struct AttachmentFolderGridView: View {
+    @Binding var searchText: String
     let onSelect: (AttachmentFolder) -> Void
+
+    private var matchingFolders: [AttachmentFolder] {
+        AttachmentFolder.allCases.filter {
+            searchText.isEmpty || $0.rawValue.localizedCaseInsensitiveContains(searchText)
+        }
+    }
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 32) {
-                Text("Arquivos e documentos")
-                    .font(.largeTitle.weight(.regular))
+                HStack(alignment: .center, spacing: 20) {
+                    Text("Arquivos e documentos")
+                        .font(.largeTitle.weight(.regular))
 
-                LazyVGrid(
-                    columns: [GridItem(.adaptive(minimum: 120, maximum: 160), spacing: 70)],
-                    alignment: .leading,
-                    spacing: 25
-                ) {
-                    ForEach(AttachmentFolder.allCases) { folder in
-                        AttachmentFolderTile(folder: folder) { onSelect(folder) }
+                    Spacer(minLength: 24)
+
+                    FinderSearchControl(text: $searchText, placeholder: "Pesquisar pastas")
+                }
+
+                if matchingFolders.isEmpty {
+                    ContentUnavailableView.search
+                        .frame(maxWidth: .infinity, minHeight: 280)
+                } else {
+                    LazyVGrid(
+                        columns: [GridItem(.adaptive(minimum: 150, maximum: 180), spacing: 70)],
+                        alignment: .leading,
+                        spacing: 40
+                    ) {
+                        ForEach(matchingFolders) { folder in
+                            AttachmentFolderTile(folder: folder) { onSelect(folder) }
+                        }
                     }
                 }
             }
@@ -115,18 +133,17 @@ private struct AttachmentFolderTile: View {
 
     var body: some View {
         Button(action: action) {
-            VStack(alignment: .leading, spacing: 10) {
+            VStack(alignment: .center, spacing: 10) {
                 Image(.folderAttachments)
-                    .font(.largeTitle)
-                    .symbolRenderingMode(.hierarchical)
-                    .foregroundStyle(.blue)
+                    .resizable()
+                    .frame(width: 200)
                 Text(folder.rawValue)
                     .font(.subheadline)
                     .foregroundStyle(.primary)
                     .lineLimit(2)
                     .frame(maxWidth: .infinity, alignment: .center)
             }
-            .frame(width: 140, alignment: .leading)
+            .padding(10)
             .contentShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
         }
         .buttonStyle(.plain)
@@ -161,7 +178,7 @@ private struct AttachmentFolderDetailView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 24) {
+            VStack(alignment: .leading, spacing: 30) {
                 AttachmentFolderHeader(
                     folder: folder,
                     searchText: $searchText,
@@ -209,9 +226,72 @@ private struct AttachmentFolderHeader: View {
 
             Spacer(minLength: 24)
 
-            SearchFieldView(text: $searchText)
-                .frame(minWidth: 260, idealWidth: 340, maxWidth: 420)
+            FinderSearchControl(text: $searchText, placeholder: "Pesquisar arquivos")
         }
+    }
+}
+
+/// Campo de busca compacto inspirado no Finder. Ele ocupa apenas o espaço da
+/// lupa até ser acionado e começa a filtrar o conteúdo enquanto o usuário digita.
+private struct FinderSearchControl: View {
+    @Binding var text: String
+    let placeholder: String
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @FocusState private var isFocused: Bool
+    @State private var isExpanded = false
+
+    var body: some View {
+        HStack(spacing: 8) {
+            if isExpanded {
+                Image(systemName: "magnifyingglass")
+                    .foregroundStyle(.secondary)
+
+                TextField(placeholder, text: $text)
+                    .textFieldStyle(.plain)
+                    .focused($isFocused)
+                    .onSubmit { isFocused = false }
+                    .onExitCommand(perform: collapse)
+
+                if !text.isEmpty {
+                    Button("Limpar", systemImage: "xmark.circle.fill", action: clear)
+                        .labelStyle(.iconOnly)
+                        .buttonStyle(.plain)
+                        .foregroundStyle(.secondary)
+                        .accessibilityLabel("Limpar pesquisa")
+                }
+            } else {
+                Button(action: expand) {
+                    Image(systemName: "magnifyingglass")
+                        .frame(width: 28, height: 28)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Pesquisar")
+                .accessibilityHint("Expande o campo de pesquisa")
+            }
+        }
+        .font(.subheadline)
+        .padding(.vertical, 6)
+        .padding(.horizontal, isExpanded ? 10 : 4)
+        .frame(width: isExpanded ? 300 : 36)
+        .modifier(GlassPillModifier(tint: nil, isSelected: false))
+        .animation(reduceMotion ? nil : .snappy(duration: 0.22), value: isExpanded)
+    }
+
+    private func expand() {
+        isExpanded = true
+        DispatchQueue.main.async { isFocused = true }
+    }
+
+    private func clear() {
+        text = ""
+        isFocused = true
+    }
+
+    private func collapse() {
+        isFocused = false
+        text = ""
+        isExpanded = false
     }
 }
 
