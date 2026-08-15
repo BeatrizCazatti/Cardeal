@@ -2,7 +2,6 @@ import SwiftUI
 
 enum SidebarDestination: Hashable {
     case dashboard
-    case timeline
     case attachments
 }
 

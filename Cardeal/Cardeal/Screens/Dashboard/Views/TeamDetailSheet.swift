@@ -11,6 +11,7 @@ struct TeamDetailSheet: View {
 
     let team: TeamDetail
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var selectedTab: Tab = .timeline
     @State private var selectedMember: TeamMember?
 
@@ -32,14 +33,7 @@ struct TeamDetailSheet: View {
             .padding(.bottom, 22)
 
             HStack {
-                Picker("Conteúdo", selection: $selectedTab) {
-                    ForEach(Tab.allCases) { tab in
-                        Text(tab.rawValue).tag(tab)
-                    }
-                }
-                .labelsHidden()
-                .pickerStyle(.segmented)
-                .frame(width: 340)
+                tabSelector
 
                 Spacer()
             }
@@ -58,8 +52,47 @@ struct TeamDetailSheet: View {
             }
         }
         .frame(minWidth: 960, idealWidth: 1_160, minHeight: 620, idealHeight: 720)
-        .onAppear {
-            selectedMember = team.members.first
+    }
+
+    private var tabSelector: some View {
+        HStack(spacing: 8) {
+            ForEach(Tab.allCases) { tab in
+                Button {
+                    select(tab)
+                } label: {
+                    Text(tab.rawValue)
+                        .foregroundStyle(selectedTab == tab ? Color.tabButtonSelectedText : Color.tabButtonText)
+                        .font(.title3.weight(selectedTab == tab ? .semibold : .regular))
+                        .padding(.horizontal, 20)
+                        .frame(minHeight: 44)
+                        .contentShape(.capsule)
+                }
+                .buttonStyle(.plain)
+                .background {
+                    if selectedTab == tab {
+                        Capsule(style: .continuous)
+                            .fill(Color.primaryAction)
+                    }
+                }
+                .accessibilityAddTraits(selectedTab == tab ? .isSelected : [])
+            }
+        }
+        .padding(.vertical, 4)
+    }
+
+    private func select(_ tab: Tab) {
+        guard tab != selectedTab else { return }
+
+        if tab == .people {
+            selectedMember = nil
+        }
+
+        if reduceMotion {
+            selectedTab = tab
+        } else {
+            withAnimation(.snappy(duration: 0.25)) {
+                selectedTab = tab
+            }
         }
     }
 }

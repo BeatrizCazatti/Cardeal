@@ -49,7 +49,7 @@ struct DashboardView: View {
             )
         }
         .navigationSplitViewStyle(.balanced)
-        .onAppear(perform: purgeExpiredDeletedItems)
+        .onAppear(perform: refreshFilterCounts)
         .alert("Card arquivado", isPresented: $isArchiveUndoPresented) {
             Button("Desfazer") {
                 restoreArchivedItem()
@@ -72,6 +72,7 @@ struct DashboardView: View {
     private func updateItem(itemID: BoardItem.ID, in columnID: BoardColumn.ID, with draft: BoardItemDraft) {
         guard let columnIndex = columns.firstIndex(where: { $0.id == columnID }) else { return }
         columns[columnIndex].update(itemID: itemID, with: draft)
+        refreshFilterCounts()
     }
 
     private func archiveItem(itemID: BoardItem.ID, in columnID: BoardColumn.ID) {
@@ -95,6 +96,7 @@ struct DashboardView: View {
     private func createItem(draft: BoardItemDraft, in team: String, category: DashboardItemCategory) {
         guard let columnIndex = columns.firstIndex(where: { $0.title == team }) else { return }
         columns[columnIndex].items.append(BoardItem(draft: draft, category: category))
+        refreshFilterCounts()
     }
 
     private func restoreArchivedItem() {
@@ -174,8 +176,6 @@ private struct SidebarDetailView: View {
                 deleteItem: deleteItem,
                 createItem: createItem
             )
-        case .timeline:
-            TimelineView()
         case .attachments:
             AttachmentsView()
         case nil:
@@ -212,7 +212,7 @@ struct DashboardContentView: View {
 
                 HStack(alignment: .center, spacing: 16) {
                     FilterTabsView(tabs: filterTabs, selection: $selectedTab)
-                    Spacer(minLength: 12)
+                    Spacer()
                     ToolbarActionsView(teamNames: columns.map(\.title), createItem: createItem)
                 }
 
@@ -251,6 +251,7 @@ struct DashboardContentView: View {
             StoredItemsBoardView(items: deletedItems, title: "Excluído em")
         }
     }
+
 }
 
 // MARK: - Cabeçalho de saudação
@@ -278,7 +279,7 @@ struct WeekNavigatorView: View {
     var body: some View {
         HStack(spacing: 12) {
             Button {
-                movePeriod(by: -1)
+                moveWeek(by: -1)
             } label: {
                 Image(systemName: "chevron.left")
             }
@@ -296,7 +297,7 @@ struct WeekNavigatorView: View {
             }
 
             Button {
-                movePeriod(by: 1)
+                moveWeek(by: 1)
             } label: {
                 Image(systemName: "chevron.right")
             }
@@ -310,10 +311,12 @@ struct WeekNavigatorView: View {
         return "\(start) - \(end)"
     }
 
-    private func movePeriod(by value: Int) {
-        guard let start = calendar.date(byAdding: .day, value: value, to: selection.start),
-              let end = calendar.date(byAdding: .day, value: value, to: selection.end) else { return }
-        selection = WeekRange(start: start, end: end, calendar: calendar)
+    private func moveWeek(by value: Int) {
+        guard let nextWeek = calendar.date(byAdding: .weekOfYear, value: value, to: selection.start) else {
+            return
+        }
+
+        selection = WeekRange(start: nextWeek, calendar: calendar)
     }
 }
 
@@ -330,10 +333,11 @@ struct ToolbarActionsView: View {
     @State private var sortOption: SortOption = .oldest
     @State private var selectedPeople: Set<String> = ["Leonardo Drummond", "Eduarda Vieira"]
     @State private var selectedSubjects: Set<String> = ["Pagamentos", "Entregas"]
+    @State private var selectedTeams: Set<String> = ["Atendimento"]
 
     var body: some View {
         HStack(spacing: 16) {
-            DashboardToolbarIconButton(systemImage: "line.3.horizontal.decrease", accessibilityLabel: "Filtrar") {
+            ToolbarIconButton(systemImage: "line.3.horizontal.decrease", accessibilityLabel: "Filtrar") {
                 isFilterPopoverPresented.toggle()
                 isSortPopoverPresented = false
             }
@@ -344,11 +348,13 @@ struct ToolbarActionsView: View {
             ) {
                 FilterPopover(
                     selectedPeople: $selectedPeople,
-                    selectedSubjects: $selectedSubjects
+                    selectedSubjects: $selectedSubjects,
+                    selectedTeams: $selectedTeams,
+                    teams: teamNames
                 )
             }
 
-            DashboardToolbarIconButton(systemImage: "arrow.up.arrow.down", accessibilityLabel: "Ordenar") {
+            ToolbarIconButton(systemImage: "arrow.up.arrow.down", accessibilityLabel: "Ordenar") {
                 isSortPopoverPresented.toggle()
                 isFilterPopoverPresented = false
             }
@@ -363,7 +369,7 @@ struct ToolbarActionsView: View {
             DashboardToolbarPrimaryButton(title: "Atualizar", systemImage: "arrow.clockwise") {
                 // Ação: atualizar
             }
-            DashboardToolbarPrimaryButton(title: "Novo item", systemImage: "plus") {
+            DashboardToolbarPrimaryButton(title: "Novo Item", systemImage: "plus") {
                 isNewItemPresented = true
             }
         }
@@ -375,26 +381,7 @@ struct ToolbarActionsView: View {
     }
 }
 
-private struct DashboardToolbarIconButton: View {
-    let systemImage: String
-    let accessibilityLabel: String
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            Image(systemName: systemImage)
-                .font(.title3.weight(.medium))
-                .foregroundStyle(.secondaryText)
-                .frame(width: 48, height: 48)
-        }
-        .buttonStyle(.plain)
-        .background(Circle().fill(.secondaryAction))
-        .shadow(color: .black.opacity(0.08), radius: 10, y: 4)
-        .accessibilityLabel(accessibilityLabel)
-    }
-}
-
-private struct DashboardToolbarPrimaryButton: View {
+struct DashboardToolbarPrimaryButton: View {
     let title: String
     let systemImage: String
     let action: () -> Void
@@ -417,7 +404,7 @@ private struct DashboardToolbarPrimaryButton: View {
     }
 }
 
-private struct NewBoardItemSheet: View {
+struct NewBoardItemSheet: View {
     let teamNames: [String]
     let createItem: (BoardItemDraft, String, DashboardItemCategory) -> Void
 
