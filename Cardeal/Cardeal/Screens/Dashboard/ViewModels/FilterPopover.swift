@@ -1,205 +1,146 @@
 import SwiftUI
 
-
+/// Painel de filtros reutilizável para as ações de filtro do dashboard.
 struct FilterPopover: View {
-
     @Binding var selectedPeople: Set<String>
     @Binding var selectedSubjects: Set<String>
+    @Binding var selectedTeams: Set<String>
+    let teams: [String]
 
-    private let people = [
-        "Leonardo Drummond",
-        "Eduarda Vieira"
-    ]
+    @State private var peopleSearchText = ""
+    @State private var teamsSearchText = ""
 
-    private let subjects = [
-        "Pagamentos",
-        "Metas e planos",
-        "Contratos",
-        "Entregas",
-        "Vendas",
-        "Recursos Humanos"
-    ]
+    private let people = ["Leonardo Drummond", "Eduarda Vieira"]
+
+    private var visiblePeople: [String] {
+        people.filter { peopleSearchText.isEmpty || $0.localizedCaseInsensitiveContains(peopleSearchText) }
+    }
+
+    private var visibleTeams: [String] {
+        teams.filter { teamsSearchText.isEmpty || $0.localizedCaseInsensitiveContains(teamsSearchText) }
+    }
 
     var body: some View {
-
-        VStack(alignment: .leading, spacing: 0) {
-
+        VStack(alignment: .leading, spacing: 16) {
             Text("Filtrar por")
-                .font(.subheadline.weight(.medium))
-                .foregroundStyle(.primary)
+                .font(.headline)
 
             Divider()
-                .padding(.vertical, 8)
 
-            filterSection(
-                title: "Pessoas"
-            ) {
-
-                peopleFilters
+            filterSection(title: "Pessoas") {
+                FilterSearchField(placeholder: "Pesquisar pessoas", text: $peopleSearchText)
+                FlowLayout(spacing: 6) {
+                    ForEach(visiblePeople, id: \.self) { person in
+                        FilterChip(title: person, isSelected: selectedPeople.contains(person), showsCloseButton: true) {
+                            toggle(person, in: &selectedPeople)
+                        }
+                    }
+                }
             }
 
-            filterSection(
-                title: "Assuntos"
-            ) {
+            filterSection(title: "Assuntos") {
+                FlowLayout(spacing: 6) {
+                    ForEach(FilterSubject.allCases) { subject in
+                        FilterChip(
+                            title: subject.rawValue,
+                            isSelected: selectedSubjects.contains(subject.rawValue),
+                            showsCloseButton: false
+                        ) {
+                            toggle(subject.rawValue, in: &selectedSubjects)
+                        }
+                    }
+                }
+            }
 
-                subjectFilters
+            if !teams.isEmpty {
+                filterSection(title: "Equipes") {
+                    FilterSearchField(placeholder: "Pesquisar equipes e grupos", text: $teamsSearchText)
+                    FlowLayout(spacing: 6) {
+                        ForEach(visibleTeams, id: \.self) { team in
+                            FilterChip(title: team, isSelected: selectedTeams.contains(team), showsCloseButton: true) {
+                                toggle(team, in: &selectedTeams)
+                            }
+                        }
+                    }
+                }
             }
         }
-        .padding(12)
-        .frame(width: 294)
-        .background(.white)
+        .padding(20)
+        .frame(width: 366)
     }
-}
 
-private extension FilterPopover {
-
-    @ViewBuilder
-    func filterSection<Content: View>(
+    private func filterSection<Content: View>(
         title: String,
         @ViewBuilder content: () -> Content
     ) -> some View {
-
-        VStack(
-            alignment: .leading,
-            spacing: 7
-        ) {
-
+        VStack(alignment: .leading, spacing: 8) {
             Text(title)
                 .font(.subheadline.weight(.medium))
-
             content()
         }
-        .padding(.bottom, 12)
     }
-}
 
-private extension FilterPopover {
-
-    var peopleFilters: some View {
-
-        FlowLayout(
-            spacing: 6
-        ) {
-
-            ForEach(people, id: \.self) { person in
-
-                FilterChip(
-                    title: person,
-                    isSelected: selectedPeople.contains(person),
-                    showsCloseButton: true
-                ) {
-
-                    togglePerson(person)
-                }
-            }
+    private func toggle(_ value: String, in selection: inout Set<String>) {
+        if selection.contains(value) {
+            selection.remove(value)
+        } else {
+            selection.insert(value)
         }
     }
 }
 
-private extension FilterPopover {
+struct FilterSearchField: View {
+    let placeholder: String
+    @Binding var text: String
 
-    var subjectFilters: some View {
-
-        FlowLayout(
-            spacing: 6
-        ) {
-
-            ForEach(
-                FilterSubject.allCases
-            ) { subject in
-
-                FilterChip(
-                    title: subject.rawValue,
-                    isSelected:
-                        selectedSubjects.contains(
-                            subject.rawValue
-                        ),
-                    showsCloseButton: false
-                ) {
-
-                    toggleSubject(
-                        subject.rawValue
-                    )
-                }
-            }
+    var body: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "magnifyingglass")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            TextField(placeholder, text: $text)
+                .textFieldStyle(.plain)
         }
-    }
-
-    func toggleSubject(_ subject: String) {
-
-        if selectedSubjects.contains(subject) {
-            selectedSubjects.remove(subject)
-        } else {
-            selectedSubjects.insert(subject)
-        }
-    }
-
-    func togglePerson(_ person: String) {
-        if selectedPeople.contains(person) {
-            selectedPeople.remove(person)
-        } else {
-            selectedPeople.insert(person)
-        }
+        .font(.caption)
+        .padding(.horizontal, 10)
+        .frame(height: 24)
+        .background(Capsule().fill(Color.primaryAction.opacity(0.09)))
     }
 }
 
 struct FilterChip: View {
-
     let title: String
     let isSelected: Bool
     let showsCloseButton: Bool
     let action: () -> Void
 
     var body: some View {
-
         Button(action: action) {
-
-            HStack(spacing: 5) {
-
-                if showsCloseButton {
-
-                    Image(
-                        systemName: "xmark"
-                    )
-                    .font(.caption2.weight(.medium))
-                    .foregroundStyle(
-                        .secondary
-                    )
-
+            HStack(spacing: 6) {
+                if showsCloseButton, isSelected {
+                    Image(systemName: "xmark")
+                        .font(.caption2.weight(.bold))
                 } else {
-
                     Circle()
-                        .stroke(
-                            isSelected
-                                ? Color.accentColor
-                                : Color.secondary.opacity(0.6),
-                            lineWidth: 1
-                        )
-                        .fill(
-                            isSelected
-                                ? Color.accentColor
-                                : .clear
-                        )
-                        .frame(
-                            width: 9,
-                            height: 9
-                        )
+                        .fill(isSelected ? Color.white : Color.primaryAction.opacity(0.28))
+                        .overlay {
+                            if !isSelected {
+                                Circle().stroke(Color.primaryAction.opacity(0.8), lineWidth: 1)
+                            }
+                        }
+                        .frame(width: 10, height: 10)
                 }
 
                 Text(title)
-                    .font(.caption)
                     .lineLimit(1)
             }
-            .padding(.horizontal, 8)
-            .frame(minHeight: 20)
-            .background {
-                Capsule()
-                    .fill(
-                        Color.accentColor
-                            .opacity(0.08)
-                    )
-            }
+            .font(.caption)
+            .foregroundStyle(isSelected ? .white : .primary)
+            .padding(.horizontal, 10)
+            .frame(minHeight: 24)
         }
         .buttonStyle(.plain)
+        .background(Capsule().fill(isSelected ? Color.primaryAction : Color.primaryAction.opacity(0.09)))
+        .accessibilityValue(isSelected ? "Selecionado" : "Não selecionado")
     }
 }

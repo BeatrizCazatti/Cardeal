@@ -9,11 +9,12 @@ struct AttachmentsView: View {
     @State private var selectedType: AttachmentType?
     @State private var selectedPerson: String?
     @State private var selectedTeam: String?
+    @State private var sortOption: SortOption = .newest
 
     private let attachments = MockData.attachments
 
     private var filteredAttachments: [AttachmentItem] {
-        attachments.filter { attachment in
+        let matchingAttachments = attachments.filter { attachment in
             let matchesFolder = attachment.folder == selectedFolder
             let matchesSearch = searchText.isEmpty || [attachment.name, attachment.owner, attachment.location]
                 .contains { $0.localizedCaseInsensitiveContains(searchText) }
@@ -22,6 +23,17 @@ struct AttachmentsView: View {
             let matchesTeam = selectedTeam == nil || attachment.team == selectedTeam
 
             return matchesFolder && matchesSearch && matchesType && matchesPerson && matchesTeam
+        }
+
+        switch sortOption {
+        case .newest:
+            return matchingAttachments
+        case .oldest:
+            return Array(matchingAttachments.reversed())
+        case .name:
+            return matchingAttachments.sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
+        case .priority:
+            return matchingAttachments.sorted { $0.type.rawValue < $1.type.rawValue }
         }
     }
 
@@ -38,6 +50,7 @@ struct AttachmentsView: View {
                     selectedType: $selectedType,
                     selectedPerson: $selectedPerson,
                     selectedTeam: $selectedTeam,
+                    sortOption: $sortOption,
                     onNavigateBack: navigateToRoot
                 )
             } else {
@@ -80,9 +93,9 @@ private struct AttachmentFolderGridView: View {
                     .font(.largeTitle.weight(.regular))
 
                 LazyVGrid(
-                    columns: [GridItem(.adaptive(minimum: 140, maximum: 170), spacing: 28)],
+                    columns: [GridItem(.adaptive(minimum: 120, maximum: 160), spacing: 70)],
                     alignment: .leading,
-                    spacing: 28
+                    spacing: 25
                 ) {
                     ForEach(AttachmentFolder.allCases) { folder in
                         AttachmentFolderTile(folder: folder) { onSelect(folder) }
@@ -103,7 +116,7 @@ private struct AttachmentFolderTile: View {
     var body: some View {
         Button(action: action) {
             VStack(alignment: .leading, spacing: 10) {
-                Image(systemName: "folder.fill")
+                Image(.folderAttachments)
                     .font(.largeTitle)
                     .symbolRenderingMode(.hierarchical)
                     .foregroundStyle(.blue)
@@ -111,7 +124,7 @@ private struct AttachmentFolderTile: View {
                     .font(.subheadline)
                     .foregroundStyle(.primary)
                     .lineLimit(2)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .frame(maxWidth: .infinity, alignment: .center)
             }
             .frame(width: 140, alignment: .leading)
             .contentShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
@@ -131,6 +144,7 @@ private struct AttachmentFolderDetailView: View {
     @Binding var selectedType: AttachmentType?
     @Binding var selectedPerson: String?
     @Binding var selectedTeam: String?
+    @Binding var sortOption: SortOption
     let onNavigateBack: () -> Void
 
     private var people: [String] {
@@ -158,6 +172,7 @@ private struct AttachmentFolderDetailView: View {
                     selectedType: $selectedType,
                     selectedPerson: $selectedPerson,
                     selectedTeam: $selectedTeam,
+                    sortOption: $sortOption,
                     people: people,
                     teams: teams
                 )
@@ -204,53 +219,112 @@ private struct AttachmentFiltersView: View {
     @Binding var selectedType: AttachmentType?
     @Binding var selectedPerson: String?
     @Binding var selectedTeam: String?
+    @Binding var sortOption: SortOption
     let people: [String]
     let teams: [String]
 
+    @State private var isFilterPopoverPresented = false
+    @State private var isSortPopoverPresented = false
+
     var body: some View {
         HStack(spacing: 12) {
-            AttachmentFilterMenu(
-                title: "Tipo",
-                selection: $selectedType,
-                values: AttachmentType.allCases,
-                displayName: \.rawValue
-            )
-            AttachmentFilterMenu(title: "Pessoas", selection: $selectedPerson, values: people, displayName: { $0 })
-            AttachmentFilterMenu(title: "Equipe", selection: $selectedTeam, values: teams, displayName: { $0 })
-
             Spacer()
 
-            Button("Opções de exibição", systemImage: "line.3.horizontal.decrease") {}
-                .labelStyle(.iconOnly)
-                .buttonStyle(.borderedProminent)
-                .clipShape(Circle())
+            ToolbarIconButton(systemImage: "line.3.horizontal.decrease", accessibilityLabel: "Filtrar arquivos") {
+                isFilterPopoverPresented.toggle()
+                isSortPopoverPresented = false
+            }
+            .popover(isPresented: $isFilterPopoverPresented, attachmentAnchor: .rect(.bounds), arrowEdge: .top) {
+                AttachmentFilterPopover(
+                    selectedType: $selectedType,
+                    selectedPerson: $selectedPerson,
+                    selectedTeam: $selectedTeam,
+                    people: people,
+                    teams: teams
+                )
+            }
 
-            Button("Ordenar", systemImage: "arrow.up.arrow.down") {}
-                .labelStyle(.iconOnly)
-                .buttonStyle(.borderedProminent)
-                .clipShape(Circle())
+            ToolbarIconButton(systemImage: "arrow.up.arrow.down", accessibilityLabel: "Ordenar arquivos") {
+                isSortPopoverPresented.toggle()
+                isFilterPopoverPresented = false
+            }
+            .popover(isPresented: $isSortPopoverPresented, attachmentAnchor: .rect(.bounds), arrowEdge: .top) {
+                SortPopover(selection: $sortOption)
+            }
         }
     }
 }
 
-private struct AttachmentFilterMenu<Value: Hashable>: View {
-    let title: String
-    @Binding var selection: Value?
-    let values: [Value]
-    let displayName: (Value) -> String
+private struct AttachmentFilterPopover: View {
+    @Binding var selectedType: AttachmentType?
+    @Binding var selectedPerson: String?
+    @Binding var selectedTeam: String?
+    let people: [String]
+    let teams: [String]
+
+    @State private var peopleSearchText = ""
+    @State private var teamsSearchText = ""
 
     var body: some View {
-        Menu {
-            Button("Todos") { selection = nil }
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Filtrar por")
+                .font(.headline)
+
             Divider()
-            ForEach(values, id: \.self) { value in
-                Button(displayName(value)) { selection = value }
+
+            section(title: "Tipo") {
+                FlowLayout(spacing: 6) {
+                    ForEach(AttachmentType.allCases) { type in
+                        singleChoiceChip(title: type.rawValue, isSelected: selectedType == type) {
+                            selectedType = selectedType == type ? nil : type
+                        }
+                    }
+                }
             }
-        } label: {
-            Label(title, systemImage: "chevron.down")
+
+            section(title: "Pessoas") {
+                FilterSearchField(placeholder: "Pesquisar pessoas", text: $peopleSearchText)
+                FlowLayout(spacing: 6) {
+                    ForEach(matching(people, query: peopleSearchText), id: \.self) { person in
+                        singleChoiceChip(title: person, isSelected: selectedPerson == person) {
+                            selectedPerson = selectedPerson == person ? nil : person
+                        }
+                    }
+                }
+            }
+
+            section(title: "Equipes") {
+                FilterSearchField(placeholder: "Pesquisar equipes e grupos", text: $teamsSearchText)
+                FlowLayout(spacing: 6) {
+                    ForEach(matching(teams, query: teamsSearchText), id: \.self) { team in
+                        singleChoiceChip(title: team, isSelected: selectedTeam == team) {
+                            selectedTeam = selectedTeam == team ? nil : team
+                        }
+                    }
+                }
+            }
         }
-        .menuStyle(.borderlessButton)
-        .buttonStyle(.borderedProminent)
+        .padding(20)
+        .frame(width: 366)
+    }
+
+    private func section<Content: View>(
+        title: String,
+        @ViewBuilder content: () -> Content
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(title)
+                .font(.subheadline.weight(.medium))
+            content()
+        }
+    }
+
+    private func matching(_ values: [String], query: String) -> [String] {
+        values.filter { query.isEmpty || $0.localizedCaseInsensitiveContains(query) }
+    }
+
+    private func singleChoiceChip(title: String, isSelected: Bool, action: @escaping () -> Void) -> some View {
+        FilterChip(title: title, isSelected: isSelected, showsCloseButton: false, action: action)
     }
 }
 

@@ -331,10 +331,11 @@ struct ToolbarActionsView: View {
     @State private var sortOption: SortOption = .oldest
     @State private var selectedPeople: Set<String> = ["Leonardo Drummond", "Eduarda Vieira"]
     @State private var selectedSubjects: Set<String> = ["Pagamentos", "Entregas"]
+    @State private var selectedTeams: Set<String> = ["Atendimento"]
 
     var body: some View {
         HStack(spacing: 16) {
-            DashboardToolbarIconButton(systemImage: "line.3.horizontal.decrease", accessibilityLabel: "Filtrar") {
+            ToolbarIconButton(systemImage: "line.3.horizontal.decrease", accessibilityLabel: "Filtrar") {
                 isFilterPopoverPresented.toggle()
                 isSortPopoverPresented = false
             }
@@ -345,11 +346,13 @@ struct ToolbarActionsView: View {
             ) {
                 FilterPopover(
                     selectedPeople: $selectedPeople,
-                    selectedSubjects: $selectedSubjects
+                    selectedSubjects: $selectedSubjects,
+                    selectedTeams: $selectedTeams,
+                    teams: teamNames
                 )
             }
 
-            DashboardToolbarIconButton(systemImage: "arrow.up.arrow.down", accessibilityLabel: "Ordenar") {
+            ToolbarIconButton(systemImage: "arrow.up.arrow.down", accessibilityLabel: "Ordenar") {
                 isSortPopoverPresented.toggle()
                 isFilterPopoverPresented = false
             }
@@ -364,7 +367,7 @@ struct ToolbarActionsView: View {
             DashboardToolbarPrimaryButton(title: "Atualizar", systemImage: "arrow.clockwise") {
                 // Ação: atualizar
             }
-            DashboardToolbarPrimaryButton(title: "Novo item", systemImage: "plus") {
+            DashboardToolbarPrimaryButton(title: "Upload", systemImage: "plus") {
                 isNewItemPresented = true
             }
         }
@@ -376,26 +379,7 @@ struct ToolbarActionsView: View {
     }
 }
 
-private struct DashboardToolbarIconButton: View {
-    let systemImage: String
-    let accessibilityLabel: String
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            Image(systemName: systemImage)
-                .font(.title3.weight(.medium))
-                .foregroundStyle(.secondaryText)
-                .frame(width: 48, height: 48)
-        }
-        .buttonStyle(.plain)
-        .background(Circle().fill(.secondaryAction))
-        .shadow(color: .black.opacity(0.08), radius: 10, y: 4)
-        .accessibilityLabel(accessibilityLabel)
-    }
-}
-
-private struct DashboardToolbarPrimaryButton: View {
+struct DashboardToolbarPrimaryButton: View {
     let title: String
     let systemImage: String
     let action: () -> Void
@@ -418,7 +402,7 @@ private struct DashboardToolbarPrimaryButton: View {
     }
 }
 
-private struct NewBoardItemSheet: View {
+struct NewBoardItemSheet: View {
     let teamNames: [String]
     let createItem: (BoardItemDraft, String, DashboardItemCategory) -> Void
 
