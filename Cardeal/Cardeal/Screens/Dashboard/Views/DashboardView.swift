@@ -49,7 +49,7 @@ struct DashboardView: View {
             )
         }
         .navigationSplitViewStyle(.balanced)
-        .onAppear(perform: purgeExpiredDeletedItems)
+        .onAppear(perform: refreshFilterCounts)
         .alert("Card arquivado", isPresented: $isArchiveUndoPresented) {
             Button("Desfazer") {
                 restoreArchivedItem()
@@ -72,6 +72,7 @@ struct DashboardView: View {
     private func updateItem(itemID: BoardItem.ID, in columnID: BoardColumn.ID, with draft: BoardItemDraft) {
         guard let columnIndex = columns.firstIndex(where: { $0.id == columnID }) else { return }
         columns[columnIndex].update(itemID: itemID, with: draft)
+        refreshFilterCounts()
     }
 
     private func archiveItem(itemID: BoardItem.ID, in columnID: BoardColumn.ID) {
@@ -95,6 +96,7 @@ struct DashboardView: View {
     private func createItem(draft: BoardItemDraft, in team: String, category: DashboardItemCategory) {
         guard let columnIndex = columns.firstIndex(where: { $0.title == team }) else { return }
         columns[columnIndex].items.append(BoardItem(draft: draft, category: category))
+        refreshFilterCounts()
     }
 
     private func restoreArchivedItem() {
@@ -210,7 +212,7 @@ struct DashboardContentView: View {
 
                 HStack(alignment: .center, spacing: 16) {
                     FilterTabsView(tabs: filterTabs, selection: $selectedTab)
-                    Spacer(minLength: 12)
+                    Spacer()
                     ToolbarActionsView(teamNames: columns.map(\.title), createItem: createItem)
                 }
 
@@ -249,6 +251,7 @@ struct DashboardContentView: View {
             StoredItemsBoardView(items: deletedItems, title: "Excluído em")
         }
     }
+
 }
 
 // MARK: - Cabeçalho de saudação
