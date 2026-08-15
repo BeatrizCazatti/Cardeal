@@ -204,14 +204,31 @@ private struct CalendarDayButton: View {
                         Spacer(minLength: 0)
                         Rectangle()
                             .fill(Color.primaryAction.opacity(0.14))
-                            .frame(maxWidth: .infinity, minHeight: 42)
+                            .frame(maxWidth: .infinity, maxHeight: 42)
+                            .clipShape(
+                                UnevenRoundedRectangle(
+                                    topLeadingRadius: 50,
+                                    bottomLeadingRadius: 50,
+                                    bottomTrailingRadius: 0,
+                                    topTrailingRadius: 0
+                                )
+                            )
+                        
                     }
                 }
                 if state == .end {
                     HStack(spacing: 0) {
                         Rectangle()
                             .fill(Color.primaryAction.opacity(0.14))
-                            .frame(maxWidth: .infinity, minHeight: 42)
+                            .frame(maxWidth: .infinity, maxHeight: 42)
+                            .clipShape(
+                                UnevenRoundedRectangle(
+                                    topLeadingRadius: 0,
+                                    bottomLeadingRadius: 0,
+                                    bottomTrailingRadius: 50,
+                                    topTrailingRadius: 50
+                                )
+                            )
                         Spacer(minLength: 0)
                     }
                 }
