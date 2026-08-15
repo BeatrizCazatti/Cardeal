@@ -66,7 +66,7 @@ struct WeekRangePicker: View {
                 ForEach(weekdaySymbols, id: \.self) { symbol in
                     Text(symbol)
                         .font(.subheadline.weight(.medium))
-                        .foregroundStyle(.secondaryText)
+                        .foregroundStyle(Color.primaryAction.opacity(0.72))
                         .frame(height: 36)
                 }
 
@@ -79,13 +79,21 @@ struct WeekRangePicker: View {
                     )
                 }
             }
+            .padding(8)
+            .background(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .fill(Color.primaryAction.opacity(0.045))
+            )
         }
-        .padding(28)
+        .padding(24)
         .frame(width: 430)
-        .background {
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .fill(.secondaryAction)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .strokeBorder(Color.primaryAction.opacity(0.16), lineWidth: 1)
         }
+        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .shadow(color: Color.primaryAction.opacity(0.12), radius: 20, y: 8)
         .onChange(of: selection) { _, range in
             startDate = range.start
             endDate = range.end
@@ -165,6 +173,7 @@ private extension WeekRangePicker {
         }
         .buttonStyle(.plain)
         .foregroundStyle(.primaryAction)
+        .background(Circle().fill(Color.primaryAction.opacity(0.09)))
         .accessibilityLabel(label)
     }
 }
@@ -188,28 +197,30 @@ private struct CalendarDayButton: View {
                 if state == .middle {
                     Rectangle()
                         .fill(Color.primaryAction.opacity(0.14))
-                        .frame(height: 38)
+                        .frame(height: 42)
                 }
                 if state == .start {
                     HStack(spacing: 0) {
                         Spacer(minLength: 0)
-                        Rectangle().fill(Color.primaryAction.opacity(0.14))
-                            .frame(maxWidth: .infinity, minHeight: 38)
+                        Rectangle()
+                            .fill(Color.primaryAction.opacity(0.14))
+                            .frame(maxWidth: .infinity, minHeight: 42)
                     }
                 }
                 if state == .end {
                     HStack(spacing: 0) {
-                        Rectangle().fill(Color.primaryAction.opacity(0.14))
-                            .frame(maxWidth: .infinity, minHeight: 38)
+                        Rectangle()
+                            .fill(Color.primaryAction.opacity(0.14))
+                            .frame(maxWidth: .infinity, minHeight: 42)
                         Spacer(minLength: 0)
                     }
                 }
                 if state == .start || state == .end || state == .single {
-                    Circle().fill(.primaryAction).frame(width: 38, height: 38)
+                    Circle().fill(.primaryAction).frame(width: 42, height: 42)
                 } else if isToday {
                     Circle().strokeBorder(.primaryAction, lineWidth: 1.5).frame(width: 30, height: 30)
                 } else if isHovering {
-                    Circle().fill(Color.primaryAction.opacity(0.08)).frame(width: 34, height: 34)
+                    Capsule().fill(Color.primaryAction.opacity(0.08)).frame(width: 38, height: 34)
                 }
                 Text(day.date.formatted(.dateTime.day()))
                     .font(.body.weight(.medium))

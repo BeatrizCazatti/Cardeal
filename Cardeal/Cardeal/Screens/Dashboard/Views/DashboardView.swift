@@ -279,7 +279,7 @@ struct WeekNavigatorView: View {
     var body: some View {
         HStack(spacing: 12) {
             Button {
-                movePeriod(by: -1)
+                moveWeek(by: -1)
             } label: {
                 Image(systemName: "chevron.left")
             }
@@ -297,7 +297,7 @@ struct WeekNavigatorView: View {
             }
 
             Button {
-                movePeriod(by: 1)
+                moveWeek(by: 1)
             } label: {
                 Image(systemName: "chevron.right")
             }
@@ -311,10 +311,12 @@ struct WeekNavigatorView: View {
         return "\(start) - \(end)"
     }
 
-    private func movePeriod(by value: Int) {
-        guard let start = calendar.date(byAdding: .day, value: value, to: selection.start),
-              let end = calendar.date(byAdding: .day, value: value, to: selection.end) else { return }
-        selection = WeekRange(start: start, end: end, calendar: calendar)
+    private func moveWeek(by value: Int) {
+        guard let nextWeek = calendar.date(byAdding: .weekOfYear, value: value, to: selection.start) else {
+            return
+        }
+
+        selection = WeekRange(start: nextWeek, calendar: calendar)
     }
 }
 
@@ -367,7 +369,7 @@ struct ToolbarActionsView: View {
             DashboardToolbarPrimaryButton(title: "Atualizar", systemImage: "arrow.clockwise") {
                 // Ação: atualizar
             }
-            DashboardToolbarPrimaryButton(title: "Upload", systemImage: "plus") {
+            DashboardToolbarPrimaryButton(title: "Novo Item", systemImage: "plus") {
                 isNewItemPresented = true
             }
         }
