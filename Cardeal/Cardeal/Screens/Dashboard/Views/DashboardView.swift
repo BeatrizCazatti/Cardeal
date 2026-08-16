@@ -12,6 +12,7 @@
 //
 
 import SwiftUI
+import Combine
 
 // MARK: - View principal
 
@@ -19,7 +20,7 @@ struct DashboardView: View {
     @State private var columnVisibility: NavigationSplitViewVisibility = .automatic
     @State private var selectedDestination: SidebarDestination? = .dashboard
     @State private var selectedTab: FilterTab = MockData.filterTabs.first!
-    @State private var filterTabs = MockData.filterTabs
+    @StateObject private var badgeStore = DashboardBadgeStore()
     @State private var columns = MockData.columns
     @State private var archivedItems: [StoredBoardItem] = []
     @State private var deletedItems: [StoredBoardItem] = []
@@ -37,7 +38,7 @@ struct DashboardView: View {
                 searchText: $searchText,
                 selectedWeek: $selectedWeek,
                 selectedTab: $selectedTab,
-                filterTabs: filterTabs,
+                badgeStore: badgeStore,
                 columns: columns,
                 archivedItems: archivedItems,
                 deletedItems: deletedItems,
@@ -49,7 +50,7 @@ struct DashboardView: View {
             )
         }
         .navigationSplitViewStyle(.balanced)
-        .onAppear(perform: refreshFilterCounts)
+        .onAppear(perform: refreshBadgeStore)
         .alert("Card arquivado", isPresented: $isArchiveUndoPresented) {
             Button("Desfazer") {
                 restoreArchivedItem()
@@ -65,14 +66,16 @@ struct DashboardView: View {
     private func markAsReviewed(itemID: BoardItem.ID, in columnID: BoardColumn.ID) {
         guard let columnIndex = columns.firstIndex(where: { $0.id == columnID }) else { return }
 
-        columns[columnIndex].markAsReviewed(itemID: itemID)
-        refreshFilterCounts()
+        var updatedColumn = columns[columnIndex]
+        guard updatedColumn.markAsReviewed(itemID: itemID) else { return }
+        columns[columnIndex] = updatedColumn
+        refreshBadgeStore()
     }
 
     private func updateItem(itemID: BoardItem.ID, in columnID: BoardColumn.ID, with draft: BoardItemDraft) {
         guard let columnIndex = columns.firstIndex(where: { $0.id == columnID }) else { return }
         columns[columnIndex].update(itemID: itemID, with: draft)
-        refreshFilterCounts()
+        refreshBadgeStore()
     }
 
     private func archiveItem(itemID: BoardItem.ID, in columnID: BoardColumn.ID) {
@@ -81,7 +84,7 @@ struct DashboardView: View {
 
         archivedItem = StoredBoardItem(columnID: columnID, teamName: columns[columnIndex].title, item: removedItem.item, index: removedItem.index, storedAt: Date())
         archivedItems.append(archivedItem!)
-        refreshFilterCounts()
+        refreshBadgeStore()
         isArchiveUndoPresented = true
     }
 
@@ -90,13 +93,13 @@ struct DashboardView: View {
               let removedItem = columns[columnIndex].remove(itemID: itemID) else { return }
         deletedItems.append(StoredBoardItem(columnID: columnID, teamName: columns[columnIndex].title, item: removedItem.item, index: removedItem.index, storedAt: Date()))
         purgeExpiredDeletedItems()
-        refreshFilterCounts()
+        refreshBadgeStore()
     }
 
     private func createItem(draft: BoardItemDraft, in team: String, category: DashboardItemCategory) {
         guard let columnIndex = columns.firstIndex(where: { $0.title == team }) else { return }
         columns[columnIndex].items.append(BoardItem(draft: draft, category: category))
-        refreshFilterCounts()
+        refreshBadgeStore()
     }
 
     private func restoreArchivedItem() {
@@ -106,12 +109,35 @@ struct DashboardView: View {
         columns[columnIndex].restore(archivedItem.item, at: archivedItem.index)
         archivedItems.removeAll { $0.id == archivedItem.id }
         self.archivedItem = nil
-        refreshFilterCounts()
+        refreshBadgeStore()
     }
 
-    private func refreshFilterCounts() {
-        purgeExpiredDeletedItems()
-        filterTabs = filterTabs.map { tab in
+    private func refreshBadgeStore() {
+        badgeStore.refresh(
+            columns: columns,
+            archivedItems: archivedItems,
+            deletedItems: deletedItems
+        )
+    }
+
+    private func purgeExpiredDeletedItems() {
+        let expirationDate = Calendar.current.date(byAdding: .day, value: -7, to: Date()) ?? Date()
+        deletedItems.removeAll { $0.storedAt < expirationDate }
+    }
+}
+
+/// Fonte observável dos badges das abas. A notificação explícita evita que
+/// mudanças internas em um item de `columns` fiquem invisíveis para o SwiftUI.
+final class DashboardBadgeStore: ObservableObject {
+    let objectWillChange = ObservableObjectPublisher()
+    @Published private(set) var tabs = MockData.filterTabs
+
+    func refresh(
+        columns: [BoardColumn],
+        archivedItems: [StoredBoardItem],
+        deletedItems: [StoredBoardItem]
+    ) {
+        let updatedTabs = MockData.filterTabs.map { tab in
             var updatedTab = tab
             switch tab.destination {
             case let .active(category):
@@ -123,11 +149,8 @@ struct DashboardView: View {
             }
             return updatedTab
         }
-    }
 
-    private func purgeExpiredDeletedItems() {
-        let expirationDate = Calendar.current.date(byAdding: .day, value: -7, to: Date()) ?? Date()
-        deletedItems.removeAll { $0.storedAt < expirationDate }
+        tabs = updatedTabs
     }
 }
 
@@ -148,7 +171,7 @@ private struct SidebarDetailView: View {
     @Binding var searchText: String
     @Binding var selectedWeek: WeekRange
     @Binding var selectedTab: FilterTab
-    let filterTabs: [FilterTab]
+    let badgeStore: DashboardBadgeStore
     let columns: [BoardColumn]
     let archivedItems: [StoredBoardItem]
     let deletedItems: [StoredBoardItem]
@@ -166,7 +189,7 @@ private struct SidebarDetailView: View {
                 searchText: $searchText,
                 selectedWeek: $selectedWeek,
                 selectedTab: $selectedTab,
-                filterTabs: filterTabs,
+                badgeStore: badgeStore,
                 columns: columns,
                 archivedItems: archivedItems,
                 deletedItems: deletedItems,
@@ -193,7 +216,7 @@ struct DashboardContentView: View {
     @Binding var searchText: String
     @Binding var selectedWeek: WeekRange
     @Binding var selectedTab: FilterTab
-    let filterTabs: [FilterTab]
+    @ObservedObject var badgeStore: DashboardBadgeStore
     let columns: [BoardColumn]
     let archivedItems: [StoredBoardItem]
     let deletedItems: [StoredBoardItem]
@@ -211,7 +234,7 @@ struct DashboardContentView: View {
                 WeekNavigatorView(selection: $selectedWeek)
 
                 HStack(alignment: .center, spacing: 16) {
-                    FilterTabsView(tabs: filterTabs, selection: $selectedTab)
+                    FilterTabsView(badgeStore: badgeStore, selection: $selectedTab)
                     Spacer()
                     ToolbarActionsView(teamNames: columns.map(\.title), createItem: createItem)
                 }
@@ -388,18 +411,21 @@ struct DashboardToolbarPrimaryButton: View {
 
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 10) {
-                Image(systemName: systemImage)
-                    .font(.title2.weight(.regular))
-                Text(title)
-                    .font(.title3.weight(.regular))
+            ZStack {
+                HStack(spacing: 10) {
+                    Image(systemName: systemImage)
+                        .font(.title2.weight(.regular))
+                    Text(title)
+                        .font(.title3.weight(.regular))
+                }
             }
             .foregroundStyle(.white)
             .frame(height: 48)
             .padding(.horizontal, 28)
+            .background(Capsule().fill(.primaryAction))
+            .contentShape(Capsule())
         }
         .buttonStyle(.plain)
-        .background(Capsule().fill(.primaryAction))
         .shadow(color: .primaryAction.opacity(0.22), radius: 10, y: 4)
     }
 }
@@ -987,18 +1013,20 @@ struct GlassPillModifier: ViewModifier {
 
 /// Aplica o efeito de vidro em cards retangulares de conteúdo (colunas do board).
 struct GlassCardModifier: ViewModifier {
+    var cornerRadius: CGFloat = 14
+
     func body(content: Content) -> some View {
         if #available(macOS 26.0, iOS 26.0, *) {
             content
-                .glassEffect(.regular, in: .rect(cornerRadius: 14))
+                .glassEffect(.regular, in: .rect(cornerRadius: cornerRadius))
         } else {
             content
                 .background(
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                         .fill(.ultraThinMaterial)
                 )
                 .overlay(
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                         .strokeBorder(Color.primary.opacity(0.06))
                 )
                 .shadow(color: .black.opacity(0.06), radius: 6, y: 2)

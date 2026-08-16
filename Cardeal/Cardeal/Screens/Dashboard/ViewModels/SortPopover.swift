@@ -40,6 +40,7 @@ struct SortPopover: View {
         }
         .frame(width: 180)
         .padding(12)
+        .modifier(GlassCardModifier(cornerRadius: 16))
     }
 }
 

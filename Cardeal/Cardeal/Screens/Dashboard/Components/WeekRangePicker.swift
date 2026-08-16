@@ -63,7 +63,7 @@ struct WeekRangePicker: View {
             .padding(.bottom, 16)
 
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 0), count: 7), spacing: 0) {
-                ForEach(weekdaySymbols, id: \.self) { symbol in
+                ForEach(Array(weekdaySymbols.enumerated()), id: \.offset) { _, symbol in
                     Text(symbol)
                         .font(.subheadline.weight(.medium))
                         .foregroundStyle(Color.primaryAction.opacity(0.72))
@@ -87,13 +87,7 @@ struct WeekRangePicker: View {
         }
         .padding(24)
         .frame(width: 430)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .strokeBorder(Color.primaryAction.opacity(0.16), lineWidth: 1)
-        }
-        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
-        .shadow(color: Color.primaryAction.opacity(0.12), radius: 20, y: 8)
+        .modifier(GlassCardModifier(cornerRadius: 24))
         .onChange(of: selection) { _, range in
             startDate = range.start
             endDate = range.end
@@ -138,15 +132,21 @@ private extension WeekRangePicker {
     func select(_ date: Date) {
         let selectedDay = calendar.startOfDay(for: date)
         switch selectionPhase {
-        case .defaultWeek, .complete:
-            if selectionPhase == .complete,
-               (calendar.isDate(selectedDay, inSameDayAs: startDate) || calendar.isDate(selectedDay, inSameDayAs: endDate)) {
+        case .complete:
+            if calendar.isDate(selectedDay, inSameDayAs: startDate),
+               !calendar.isDate(startDate, inSameDayAs: endDate) {
+                // Ao remover o início, o fim restante passa a ser o novo início.
+                selectSingleDay(endDate)
                 return
             }
-            startDate = selectedDay
-            endDate = selectedDay
-            selectionPhase = .awaitingEnd
-            selection = WeekRange(start: selectedDay, end: selectedDay, calendar: calendar)
+            if calendar.isDate(selectedDay, inSameDayAs: endDate) {
+                // Ao remover o fim, mantém o início aguardando um novo término.
+                selectSingleDay(startDate)
+                return
+            }
+            selectSingleDay(selectedDay)
+        case .defaultWeek:
+            selectSingleDay(selectedDay)
         case .awaitingEnd:
             guard !calendar.isDate(selectedDay, inSameDayAs: startDate) else { return }
             let range = WeekRange(start: startDate, end: selectedDay, calendar: calendar)
@@ -155,6 +155,13 @@ private extension WeekRangePicker {
             selectionPhase = .complete
             selection = range
         }
+    }
+
+    func selectSingleDay(_ date: Date) {
+        startDate = date
+        endDate = date
+        selectionPhase = .awaitingEnd
+        selection = WeekRange(start: date, end: date, calendar: calendar)
     }
 
     func changeMonth(by value: Int) {
@@ -173,7 +180,7 @@ private extension WeekRangePicker {
         }
         .buttonStyle(.plain)
         .foregroundStyle(.primaryAction)
-        .background(Circle().fill(Color.primaryAction.opacity(0.09)))
+        .background(Capsule().fill(Color.primaryAction.opacity(0.09)))
         .accessibilityLabel(label)
     }
 }
@@ -193,57 +200,19 @@ private struct CalendarDayButton: View {
 
     var body: some View {
         Button(action: action) {
-            ZStack {
-                if state == .middle {
-                    Rectangle()
-                        .fill(Color.primaryAction.opacity(0.14))
-                        .frame(height: 42)
+            // A célula sempre tem a mesma área. Os estados visuais ficam em
+            // overlays para que círculos, bordas e preenchimentos não mudem
+            // o tamanho que o LazyVGrid usa para calcular suas linhas.
+            Color.clear
+                .frame(maxWidth: .infinity, minHeight: 48, maxHeight: 48)
+                .overlay { rangeHighlight }
+                .overlay { dayIndicator }
+                .overlay {
+                    Text(day.date.formatted(.dateTime.day()))
+                        .font(.body.weight(.medium))
+                        .foregroundStyle(foregroundColor)
+                        .frame(width: 42, height: 42)
                 }
-                if state == .start {
-                    HStack(spacing: 0) {
-                        Spacer(minLength: 0)
-                        Rectangle()
-                            .fill(Color.primaryAction.opacity(0.14))
-                            .frame(maxWidth: .infinity, maxHeight: 42)
-                            .clipShape(
-                                UnevenRoundedRectangle(
-                                    topLeadingRadius: 50,
-                                    bottomLeadingRadius: 50,
-                                    bottomTrailingRadius: 0,
-                                    topTrailingRadius: 0
-                                )
-                            )
-                        
-                    }
-                }
-                if state == .end {
-                    HStack(spacing: 0) {
-                        Rectangle()
-                            .fill(Color.primaryAction.opacity(0.14))
-                            .frame(maxWidth: .infinity, maxHeight: 42)
-                            .clipShape(
-                                UnevenRoundedRectangle(
-                                    topLeadingRadius: 0,
-                                    bottomLeadingRadius: 0,
-                                    bottomTrailingRadius: 50,
-                                    topTrailingRadius: 50
-                                )
-                            )
-                        Spacer(minLength: 0)
-                    }
-                }
-                if state == .start || state == .end || state == .single {
-                    Circle().fill(.primaryAction).frame(width: 42, height: 42)
-                } else if isToday {
-                    Circle().strokeBorder(.primaryAction, lineWidth: 1.5).frame(width: 30, height: 30)
-                } else if isHovering {
-                    Capsule().fill(Color.primaryAction.opacity(0.08)).frame(width: 38, height: 34)
-                }
-                Text(day.date.formatted(.dateTime.day()))
-                    .font(.body.weight(.medium))
-                    .foregroundStyle(foregroundColor)
-            }
-            .frame(maxWidth: .infinity, minHeight: 48)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -251,6 +220,49 @@ private struct CalendarDayButton: View {
         .accessibilityLabel(day.date.formatted(date: .long, time: .omitted))
         .accessibilityValue(accessibilityValue)
         .accessibilityHint("Seleciona esta data para o período")
+    }
+
+    @ViewBuilder
+    private var rangeHighlight: some View {
+        GeometryReader { proxy in
+            let halfWidth = proxy.size.width / 2
+
+            switch state {
+            case .middle:
+                Rectangle()
+                    .fill(Color.primaryAction.opacity(0.14))
+            case .start:
+                Rectangle()
+                    .fill(Color.primaryAction.opacity(0.14))
+                    .frame(width: halfWidth)
+                    .frame(maxWidth: .infinity, alignment: .trailing)
+            case .end:
+                Rectangle()
+                    .fill(Color.primaryAction.opacity(0.14))
+                    .frame(width: halfWidth)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            case .none, .single:
+                Color.clear
+            }
+        }
+        .frame(height: 42)
+    }
+
+    @ViewBuilder
+    private var dayIndicator: some View {
+        ZStack {
+            if state == .start || state == .end || state == .single {
+                Circle().fill(.primaryAction)
+            } else if isToday {
+                Circle().strokeBorder(.primaryAction, lineWidth: 1.5)
+                    .padding(6)
+            } else if isHovering {
+                Capsule().fill(Color.primaryAction.opacity(0.08))
+                    .padding(.horizontal, 2)
+                    .padding(.vertical, 4)
+            }
+        }
+        .frame(width: 42, height: 42)
     }
 
     private var foregroundColor: Color {
