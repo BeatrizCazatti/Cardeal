@@ -1,0 +1,44 @@
+# Xcode
+#
+# build output & intermediate files
+build/
+DerivedData/
+*.build/
+
+# User-specific data (evita conflitos de interface e estado)
+*.pbxuser
+!default.pbxuser
+*.mode1v3
+!default.mode1v3
+*.mode2v3
+!default.mode2v3
+*.perspectivev3
+!default.perspectivev3
+xcuserdata/
+*.xcworkspace/xcuserdata/
+
+# Swift Package Manager (SPM)
+.build/
+.swiftpm/
+
+# CocoaPods (descomente se usar CocoaPods no projeto)
+# Pods/
+
+# Carthage (descomente se usar Carthage)
+# Carthage/Build/
+
+# macOS / OS X system files
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+._*
+.Spotlight-V100
+.Trashes
+
+# Fastlane (descomente se usar automação com Fastlane)
+# fastlane/report.xml
+# fastlane/Preview.html
+# fastlane/screenshots
+# fastlane/test_output
+
