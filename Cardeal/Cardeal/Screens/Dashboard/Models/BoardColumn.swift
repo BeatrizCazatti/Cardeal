@@ -22,9 +22,12 @@ struct BoardColumn: Identifiable, Hashable {
         )
     }
 
-    mutating func markAsReviewed(itemID: BoardItem.ID) {
-        guard let index = items.firstIndex(where: { $0.id == itemID }) else { return }
+    @discardableResult
+    mutating func markAsReviewed(itemID: BoardItem.ID) -> Bool {
+        guard let index = items.firstIndex(where: { $0.id == itemID }),
+              items[index].badgeCount != nil else { return false }
         items[index].markAsReviewed()
+        return true
     }
 
     mutating func update(itemID: BoardItem.ID, with draft: BoardItemDraft) {

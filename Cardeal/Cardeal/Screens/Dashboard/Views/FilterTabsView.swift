@@ -6,10 +6,12 @@ import SwiftUI
 /// pendentes. O conteúdo continua legível e cada aba mantém uma área de toque
 /// independente, mesmo quando a barra precisa rolar horizontalmente.
 struct FilterTabsView: View {
-    let tabs: [FilterTab]
+    @ObservedObject var badgeStore: DashboardBadgeStore
     @Binding var selection: FilterTab
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    private var tabs: [FilterTab] { badgeStore.tabs }
 
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
@@ -70,6 +72,7 @@ private struct FilterTabButton: View {
         .overlay(alignment: .topTrailing) {
             if tab.count > 0 {
                 CountBadge(count: tab.count, diameter: 25)
+                    .id(tab.count)
                     .offset(x: 10, y: -10)
                     .allowsHitTesting(false)
             }
