@@ -110,9 +110,9 @@ private struct AttachmentFolderGridView: View {
                         .frame(maxWidth: .infinity, minHeight: 280)
                 } else {
                     LazyVGrid(
-                        columns: [GridItem(.adaptive(minimum: 150, maximum: 180), spacing: 70)],
+                        columns: [GridItem(.adaptive(minimum: 120, maximum: 160), spacing: 70)],
                         alignment: .leading,
-                        spacing: 40
+                        spacing: 25
                     ) {
                         ForEach(matchingFolders) { folder in
                             AttachmentFolderTile(folder: folder) { onSelect(folder) }
@@ -178,7 +178,7 @@ private struct AttachmentFolderDetailView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 30) {
+            VStack(alignment: .leading, spacing: 24) {
                 AttachmentFolderHeader(
                     folder: folder,
                     searchText: $searchText,

@@ -45,7 +45,7 @@ struct TeamDetailSheet: View {
             Group {
                 switch selectedTab {
                 case .timeline:
-                    TeamTimelineView(activities: team.timeline)
+                    TeamTimelineView(activities: team.timeline, members: team.members)
                 case .people:
                     TeamPeopleView(members: team.members, selectedMember: $selectedMember)
                 }
@@ -99,22 +99,42 @@ struct TeamDetailSheet: View {
 
 private struct TeamTimelineView: View {
     let activities: [TeamActivity]
+    let members: [TeamMember]
+    @State private var favoriteActivityIDs = Set<TeamActivity.ID>()
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
                 ForEach(Array(activities.enumerated()), id: \.element.id) { index, activity in
-                    TeamTimelineRow(activity: activity, showsConnector: index < activities.count - 1)
+                    TeamTimelineRow(
+                        activity: activity,
+                        members: members,
+                        isFavorite: favoriteActivityIDs.contains(activity.id),
+                        showsConnector: index < activities.count - 1
+                    ) {
+                        toggleFavorite(activity)
+                    }
                 }
             }
             .padding(36)
+        }
+    }
+
+    private func toggleFavorite(_ activity: TeamActivity) {
+        if favoriteActivityIDs.contains(activity.id) {
+            favoriteActivityIDs.remove(activity.id)
+        } else {
+            favoriteActivityIDs.insert(activity.id)
         }
     }
 }
 
 private struct TeamTimelineRow: View {
     let activity: TeamActivity
+    let members: [TeamMember]
+    let isFavorite: Bool
     let showsConnector: Bool
+    let toggleFavorite: () -> Void
 
     private var categoryColor: Color {
         switch activity.category {
@@ -129,7 +149,7 @@ private struct TeamTimelineRow: View {
             VStack(alignment: .trailing, spacing: 10) {
                 Label(activity.date, systemImage: "calendar")
                     .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color.primaryAction.opacity(0.72))
                     .labelStyle(.titleAndIcon)
             }
             .frame(width: 180, alignment: .trailing)
@@ -146,7 +166,7 @@ private struct TeamTimelineRow: View {
             .frame(minHeight: 146, alignment: .top)
 
             VStack(alignment: .leading, spacing: 12) {
-                Text(activity.category.rawValue)
+                Label(activity.category.rawValue, systemImage: activity.category.systemImage)
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(categoryColor)
                 Text(activity.title)
@@ -155,13 +175,35 @@ private struct TeamTimelineRow: View {
                     .font(.body)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
-                Label(activity.participants.joined(separator: ", "), systemImage: "person.2")
-                    .font(.subheadline.weight(.medium))
-                    .foregroundStyle(.secondary)
+
+                HStack(spacing: 10) {
+                    HStack(spacing: -8) {
+                        ForEach(activity.participants, id: \.self) { participant in
+                            ProfileAvatar(name: participant, size: 36)
+                                .overlay(Circle().stroke(.background, lineWidth: 1))
+                        }
+                    }
+                    .accessibilityHidden(true)
+
+                    Text(activity.participants.joined(separator: ", "))
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(.secondary)
+                }
             }
             .padding(.bottom, 28)
 
-            Spacer(minLength: 0)
+            Spacer(minLength: 12)
+
+            Button(action: toggleFavorite) {
+                Image(systemName: isFavorite ? "star.fill" : "star")
+                    .font(.title3.weight(.medium))
+                    .foregroundStyle(isFavorite ? .yellow : Color.primaryAction)
+                    .frame(width: 36, height: 36)
+                    .contentShape(Circle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(isFavorite ? "Remover dos favoritos" : "Adicionar aos favoritos")
+            .accessibilityValue(isFavorite ? "Favorito" : "Não favorito")
         }
     }
 }
@@ -293,12 +335,43 @@ private struct TeamMemberAvatar: View {
     let size: CGFloat
 
     var body: some View {
+        ProfileAvatar(name: member.name, highlighted: highlighted, size: size)
+    }
+}
+
+/// Avatar compartilhado entre a timeline e a aba Pessoas. Quando fotos reais
+/// forem adicionadas ao catálogo de assets, este é o único ponto a trocar a
+/// representação de monograma pela imagem de perfil.
+private struct ProfileAvatar: View {
+    let name: String
+    var highlighted = false
+    let size: CGFloat
+
+    private var initials: String {
+        name
+            .split(separator: " ")
+            .prefix(2)
+            .compactMap(\.first)
+            .map(String.init)
+            .joined()
+    }
+
+    private var color: Color {
+        switch name.unicodeScalars.first?.value ?? 0 {
+        case 65...70: .cardealPurple
+        case 71...76: .cardealGreen
+        case 77...82: .cardealOrange
+        default: .cardealBlue
+        }
+    }
+
+    var body: some View {
         Circle()
-            .fill(highlighted ? Color.accentColor : Color.secondary.opacity(0.20))
+            .fill(highlighted ? Color.primaryAction : color.opacity(0.20))
             .overlay {
-                Text(member.initials)
-                    .font(.title3.weight(.semibold))
-                    .foregroundStyle(highlighted ? .white : .primary)
+                Text(initials)
+                    .font(size >= 60 ? .title3.weight(.semibold) : .caption.weight(.semibold))
+                    .foregroundStyle(highlighted ? .white : color)
             }
             .frame(width: size, height: size)
     }
