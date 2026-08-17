@@ -439,38 +439,48 @@ struct NewBoardItemSheet: View {
     @State private var assigneesText = ""
     @State private var selectedTeam = ""
     @State private var selectedCategory: DashboardItemCategory = .meeting
+    @State private var scheduledDate = Date.now
 
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
             Text("Novo item")
                 .font(.title2.weight(.semibold))
 
-            Form {
-                TextField("Título", text: $draft.title)
-                TextField("Responsáveis", text: $assigneesText)
-                TextField("Data", text: $draft.dateText)
-                TextField("Local", text: $draft.location)
+            ScrollView {
+                Form {
+                    TextField("Título", text: $draft.title)
+                    TextField("Responsáveis", text: $assigneesText)
+                    DatePicker(
+                        "Data e hora",
+                        selection: $scheduledDate,
+                        displayedComponents: [.date, .hourAndMinute]
+                    )
+                    .datePickerStyle(.compact)
+                    TextField("Local", text: $draft.location)
 
-                Picker("Time", selection: $selectedTeam) {
-                    ForEach(teamNames, id: \.self) { team in
-                        Text(team).tag(team)
+                    Picker("Time", selection: $selectedTeam) {
+                        ForEach(teamNames, id: \.self) { team in
+                            Text(team).tag(team)
+                        }
+                    }
+
+                    Picker("Tipo", selection: $selectedCategory) {
+                        ForEach(DashboardItemCategory.allCases, id: \.self) { category in
+                            Text(category.title).tag(category)
+                        }
+                    }
+
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Descrição")
+                        TextEditor(text: $draft.description)
+                            .font(.body)
+                            .frame(height: 150)
+                            .accessibilityLabel("Descrição")
                     }
                 }
-
-                Picker("Tipo", selection: $selectedCategory) {
-                    ForEach(DashboardItemCategory.allCases, id: \.self) { category in
-                        Text(category.title).tag(category)
-                    }
-                }
-
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Descrição")
-                    TextEditor(text: $draft.description)
-                        .font(.body)
-                        .frame(minHeight: 100)
-                }
+                .formStyle(.grouped)
             }
-            .formStyle(.grouped)
+            .frame(maxHeight: 460)
 
             HStack {
                 Spacer()
@@ -479,6 +489,7 @@ struct NewBoardItemSheet: View {
                 }
                 Button("Criar item") {
                     draft.assignees = assignees(from: assigneesText)
+                    draft.dateText = formattedDateAndTime(scheduledDate)
                     createItem(draft, selectedTeam, selectedCategory)
                     dismiss()
                 }
@@ -487,7 +498,7 @@ struct NewBoardItemSheet: View {
             }
         }
         .padding(24)
-        .frame(width: 460)
+        .frame(width: 460, height: 630)
         .onAppear {
             selectedTeam = teamNames.first ?? ""
         }
@@ -731,13 +742,13 @@ struct BoardItemCardView: View {
                 Text(item.title)
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(.primaryText)
-                    .fixedSize(horizontal: false, vertical: true)
+                    .lineLimit(2)
             } else {
                 HStack(alignment: .top) {
                     Text(item.title)
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(.primaryText)
-                        .fixedSize(horizontal: false, vertical: true)
+                        .lineLimit(2)
 
                     Spacer(minLength: 8)
 
@@ -765,16 +776,23 @@ struct BoardItemCardView: View {
                 Text(description)
                     .font(.caption)
                     .foregroundStyle(.secondaryText)
-                    .fixedSize(horizontal: false, vertical: true)
+                    .lineLimit(3)
+
+                if description.count > 120 {
+                    Button("Ler mais") {
+                        isEditing = true
+                    }
+                    .font(.caption.weight(.semibold))
+                    .buttonStyle(.link)
+                    .accessibilityHint("Abre o card com a descrição completa")
+                }
             }
 
-            if !item.assignees.isEmpty {
-                ForEach(item.assignees) { assignee in
-                    MetadataRow(
-                        systemImage: assignee.isGroup ? "person.2.fill" : "person.fill",
-                        text: assignee.name
-                    )
-                }
+            if let assignee = item.assignees.first {
+                MetadataRow(
+                    systemImage: assignee.isGroup ? "person.2.fill" : "person.fill",
+                    text: item.assignees.count == 1 ? assignee.name : "\(assignee.name) +\(item.assignees.count - 1)"
+                )
             }
 
             if let dateText = item.dateText {
@@ -791,6 +809,7 @@ struct BoardItemCardView: View {
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(height: 180, alignment: .topLeading)
         .modifier(GlassCardModifier())
         .overlay {
             if item.badgeCount != nil {
@@ -844,12 +863,15 @@ private struct BoardItemEditorSheet: View {
     @Environment(\.dismiss) private var dismiss
     @State private var draft: BoardItemDraft
     @State private var assigneesText: String
+    @State private var scheduledDate: Date
+    @State private var didChangeScheduledDate = false
 
     init(item: BoardItem, save: @escaping (BoardItemDraft) -> Void) {
         self.item = item
         self.save = save
         _draft = State(initialValue: BoardItemDraft(item: item))
         _assigneesText = State(initialValue: item.assignees.map(\.name).joined(separator: ", "))
+        _scheduledDate = State(initialValue: .now)
     }
 
     var body: some View {
@@ -857,20 +879,32 @@ private struct BoardItemEditorSheet: View {
             Text("Editar card")
                 .font(.title2.weight(.semibold))
 
-            Form {
-                TextField("Título", text: $draft.title)
-                TextField("Responsáveis", text: $assigneesText)
-                TextField("Data", text: $draft.dateText)
-                TextField("Local", text: $draft.location)
+            ScrollView {
+                Form {
+                    TextField("Título", text: $draft.title)
+                    TextField("Responsáveis", text: $assigneesText)
+                    DatePicker(
+                        "Data e hora",
+                        selection: $scheduledDate,
+                        displayedComponents: [.date, .hourAndMinute]
+                    )
+                    .datePickerStyle(.compact)
+                    .onChange(of: scheduledDate) { _ in
+                        didChangeScheduledDate = true
+                    }
+                    TextField("Local", text: $draft.location)
 
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Descrição")
-                    TextEditor(text: $draft.description)
-                        .font(.body)
-                        .frame(minHeight: 100)
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Descrição")
+                        TextEditor(text: $draft.description)
+                            .font(.body)
+                            .frame(height: 150)
+                            .accessibilityLabel("Descrição")
+                    }
                 }
+                .formStyle(.grouped)
             }
-            .formStyle(.grouped)
+            .frame(maxHeight: 390)
 
             HStack {
                 Spacer()
@@ -879,6 +913,9 @@ private struct BoardItemEditorSheet: View {
                 }
                 Button("Salvar") {
                     draft.assignees = assignees(from: assigneesText)
+                    if didChangeScheduledDate {
+                        draft.dateText = formattedDateAndTime(scheduledDate)
+                    }
                     save(draft)
                     dismiss()
                 }
@@ -887,7 +924,7 @@ private struct BoardItemEditorSheet: View {
             }
         }
         .padding(24)
-        .frame(width: 460)
+        .frame(width: 460, height: 560)
     }
 }
 
@@ -898,6 +935,18 @@ private func assignees(from names: String) -> [Assignee] {
             let trimmedName = name.trimmingCharacters(in: .whitespaces)
             return Assignee(name: trimmedName, isGroup: trimmedName.contains("&"))
         }
+}
+
+private func formattedDateAndTime(_ date: Date) -> String {
+    date.formatted(
+        .dateTime
+            .locale(Locale(identifier: "pt_BR"))
+            .day()
+            .month(.abbreviated)
+            .year()
+            .hour()
+            .minute()
+    )
 }
 
 private struct MetadataRow: View {
