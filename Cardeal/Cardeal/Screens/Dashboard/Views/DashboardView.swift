@@ -287,7 +287,7 @@ struct GreetingHeaderView: View {
             Text("Olá, " + name + "!")
                 .font(.title.weight(.regular))
         )
-        .foregroundStyle(.blue)
+        .foregroundStyle(.title)
     }
 }
 
