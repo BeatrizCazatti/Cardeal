@@ -889,7 +889,7 @@ private struct BoardItemEditorSheet: View {
                         displayedComponents: [.date, .hourAndMinute]
                     )
                     .datePickerStyle(.compact)
-                    .onChange(of: scheduledDate) { _ in
+                    .onChange(of: scheduledDate) {
                         didChangeScheduledDate = true
                     }
                     TextField("Local", text: $draft.location)
