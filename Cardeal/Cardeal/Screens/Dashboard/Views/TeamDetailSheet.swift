@@ -12,40 +12,67 @@ struct TeamDetailSheet: View {
     let team: TeamDetail
     @Environment(\.dismiss) private var dismiss
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.appTheme) private var theme
     @State private var selectedTab: Tab = .timeline
     @State private var selectedMember: TeamMember?
+    @State private var favoriteActivityIDs = Set<TeamActivity.ID>()
+    @State private var featuredFavoriteID: TeamActivity.ID?
+    @State private var timelineScrollTarget: TeamActivity.ID?
+
+    private var featuredFavorite: TeamActivity? {
+        guard let featuredFavoriteID else { return nil }
+        return team.timeline.first { $0.id == featuredFavoriteID }
+    }
 
     var body: some View {
         VStack(spacing: 0) {
-            HStack {
-                Text(team.name)
-                    .font(.largeTitle.weight(.semibold))
+            VStack(spacing: 0) {
+                HStack {
+                    Text(team.name)
+                        .font(.largeTitle.weight(.semibold))
 
-                Spacer()
+                    Spacer()
 
-                Button("Fechar", systemImage: "xmark", action: { dismiss() })
-                    .labelStyle(.iconOnly)
-                    .buttonStyle(.plain)
-                    .foregroundStyle(.secondary)
+                    Button("Fechar", systemImage: "xmark", action: { dismiss() })
+                        .labelStyle(.iconOnly)
+                        .buttonStyle(.plain)
+                        .foregroundStyle(.secondary)
+                }
+                .padding(.horizontal, 36)
+                .padding(.top, 32)
+                .padding(.bottom, 22)
+
+                HStack {
+                    tabSelector
+
+                    Spacer()
+                }
+                .padding(.horizontal, 36)
+                .padding(.bottom, 28)
             }
-            .padding(.horizontal, 36)
-            .padding(.top, 32)
-            .padding(.bottom, 22)
+            .background(TeamDetailHeaderBackground(theme: theme))
 
-            HStack {
-                tabSelector
-
-                Spacer()
+            if let featuredFavorite {
+                FavoriteActivityBanner(activity: featuredFavorite) {
+                    navigateToFavorite(featuredFavorite.id)
+                }
+                .padding(.horizontal, 36)
+                .padding(.vertical, 12)
             }
-            .padding(.horizontal, 36)
-            .padding(.bottom, 28)
 
             Divider()
 
             Group {
                 switch selectedTab {
                 case .timeline:
-                    TeamTimelineView(activities: team.timeline, members: team.members)
+                    TeamTimelineView(
+                        activities: team.timeline,
+                        members: team.members,
+                        favoriteActivityIDs: $favoriteActivityIDs,
+                        scrollTarget: $timelineScrollTarget
+                    ) { activityID in
+                        toggleFavorite(activityID)
+                    }
                 case .people:
                     TeamPeopleView(members: team.members, selectedMember: $selectedMember)
                 }
@@ -71,7 +98,7 @@ struct TeamDetailSheet: View {
                 .background {
                     if selectedTab == tab {
                         Capsule(style: .continuous)
-                            .fill(Color.primaryAction)
+                            .fill(theme.accentColor)
                     }
                 }
                 .accessibilityAddTraits(selectedTab == tab ? .isSelected : [])
@@ -95,36 +122,84 @@ struct TeamDetailSheet: View {
             }
         }
     }
+
+    private func toggleFavorite(_ activityID: TeamActivity.ID) {
+        if favoriteActivityIDs.contains(activityID) {
+            favoriteActivityIDs.remove(activityID)
+            if featuredFavoriteID == activityID {
+                featuredFavoriteID = favoriteActivityIDs.first
+            }
+        } else {
+            favoriteActivityIDs.insert(activityID)
+            featuredFavoriteID = activityID
+        }
+    }
+
+    private func navigateToFavorite(_ activityID: TeamActivity.ID) {
+        if selectedTab != .timeline {
+            select(.timeline)
+        }
+
+        // Limpar antes de reaplicar permite repetir o atalho para o mesmo item.
+        timelineScrollTarget = nil
+        DispatchQueue.main.async {
+            timelineScrollTarget = activityID
+        }
+    }
 }
 
 private struct TeamTimelineView: View {
     let activities: [TeamActivity]
     let members: [TeamMember]
-    @State private var favoriteActivityIDs = Set<TeamActivity.ID>()
+    @Binding var favoriteActivityIDs: Set<TeamActivity.ID>
+    @Binding var scrollTarget: TeamActivity.ID?
+    let toggleFavorite: (TeamActivity.ID) -> Void
+    @State private var highlightedActivityID: TeamActivity.ID?
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 0) {
-                ForEach(Array(activities.enumerated()), id: \.element.id) { index, activity in
-                    TeamTimelineRow(
-                        activity: activity,
-                        members: members,
-                        isFavorite: favoriteActivityIDs.contains(activity.id),
-                        showsConnector: index < activities.count - 1
-                    ) {
-                        toggleFavorite(activity)
+        ScrollViewReader { proxy in
+            ScrollView {
+                VStack(alignment: .leading, spacing: 0) {
+                    ForEach(Array(activities.enumerated()), id: \.element.id) { index, activity in
+                        TeamTimelineRow(
+                            activity: activity,
+                            members: members,
+                            isFavorite: favoriteActivityIDs.contains(activity.id),
+                            isHighlighted: highlightedActivityID == activity.id,
+                            showsConnector: index < activities.count - 1
+                        ) {
+                            toggleFavorite(activity.id)
+                        }
+                        .id(activity.id)
                     }
                 }
+                .padding(36)
             }
-            .padding(36)
+            .onAppear {
+                scroll(to: scrollTarget, using: proxy)
+            }
+            .onChange(of: scrollTarget) { _, newValue in
+                scroll(to: newValue, using: proxy)
+            }
         }
     }
 
-    private func toggleFavorite(_ activity: TeamActivity) {
-        if favoriteActivityIDs.contains(activity.id) {
-            favoriteActivityIDs.remove(activity.id)
-        } else {
-            favoriteActivityIDs.insert(activity.id)
+    private func scroll(to target: TeamActivity.ID?, using proxy: ScrollViewProxy) {
+        guard let target else { return }
+
+        DispatchQueue.main.async {
+            withAnimation(.snappy(duration: 0.4)) {
+                proxy.scrollTo(target, anchor: .center)
+                highlightedActivityID = target
+            }
+            scrollTarget = nil
+
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.8) {
+                guard highlightedActivityID == target else { return }
+                withAnimation(.easeOut(duration: 0.3)) {
+                    highlightedActivityID = nil
+                }
+            }
         }
     }
 }
@@ -133,8 +208,10 @@ private struct TeamTimelineRow: View {
     let activity: TeamActivity
     let members: [TeamMember]
     let isFavorite: Bool
+    let isHighlighted: Bool
     let showsConnector: Bool
     let toggleFavorite: () -> Void
+    @Environment(\.appTheme) private var theme
 
     private var categoryColor: Color {
         switch activity.category {
@@ -147,10 +224,9 @@ private struct TeamTimelineRow: View {
     var body: some View {
         HStack(alignment: .top, spacing: 24) {
             VStack(alignment: .trailing, spacing: 10) {
-                Label(activity.date, systemImage: "calendar")
+                Text(activity.date)
                     .font(.subheadline)
-                    .foregroundStyle(Color.primaryAction.opacity(0.72))
-                    .labelStyle(.titleAndIcon)
+                    .foregroundStyle(theme.accentColor.opacity(0.72))
             }
             .frame(width: 180, alignment: .trailing)
 
@@ -185,9 +261,9 @@ private struct TeamTimelineRow: View {
                     }
                     .accessibilityHidden(true)
 
-                    Text(activity.participants.joined(separator: ", "))
-                        .font(.subheadline.weight(.medium))
-                        .foregroundStyle(.secondary)
+//                    Text(activity.participants.joined(separator: ", "))
+//                        .font(.subheadline.weight(.medium))
+//                        .foregroundStyle(.secondary)
                 }
             }
             .padding(.bottom, 28)
@@ -197,7 +273,7 @@ private struct TeamTimelineRow: View {
             Button(action: toggleFavorite) {
                 Image(systemName: isFavorite ? "star.fill" : "star")
                     .font(.title3.weight(.medium))
-                    .foregroundStyle(isFavorite ? .yellow : Color.primaryAction)
+                    .foregroundStyle(isFavorite ? .yellow : theme.accentColor)
                     .frame(width: 36, height: 36)
                     .contentShape(Circle())
             }
@@ -205,6 +281,54 @@ private struct TeamTimelineRow: View {
             .accessibilityLabel(isFavorite ? "Remover dos favoritos" : "Adicionar aos favoritos")
             .accessibilityValue(isFavorite ? "Favorito" : "Não favorito")
         }
+        .padding(.horizontal, 12)
+        .background {
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(isHighlighted ? theme.accentColor.opacity(0.12) : .clear)
+        }
+        .overlay {
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(isHighlighted ? theme.accentColor.opacity(0.45) : .clear, lineWidth: 1)
+        }
+        .animation(.easeInOut(duration: 0.2), value: isHighlighted)
+    }
+}
+
+private struct FavoriteActivityBanner: View {
+    let activity: TeamActivity
+    let action: () -> Void
+
+    @Environment(\.appTheme) private var theme
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 12) {
+                Image(systemName: "star.fill")
+                    .foregroundStyle(theme.accentColor)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Favorito")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                    Text(activity.title)
+                        .font(.subheadline.weight(.semibold))
+                        .lineLimit(1)
+                }
+
+                Spacer(minLength: 12)
+
+                Image(systemName: "arrow.down")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(theme.accentColor)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+            .background(theme.accentColor.opacity(0.10), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Favorito: \(activity.title)")
+        .accessibilityHint("Vai para esta atividade na linha do tempo")
     }
 }
 
@@ -376,3 +500,4 @@ private struct ProfileAvatar: View {
             .frame(width: size, height: size)
     }
 }
+
