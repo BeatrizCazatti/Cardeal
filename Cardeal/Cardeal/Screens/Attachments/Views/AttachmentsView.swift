@@ -16,8 +16,7 @@ struct AttachmentsView: View {
     private var filteredAttachments: [AttachmentItem] {
         let matchingAttachments = attachments.filter { attachment in
             let matchesFolder = attachment.folder == selectedFolder
-            let matchesSearch = searchText.isEmpty || [attachment.name, attachment.owner, attachment.location]
-                .contains { $0.localizedCaseInsensitiveContains(searchText) }
+            let matchesSearch = attachment.matches(searchQuery: searchText)
             let matchesType = selectedType == nil || attachment.type == selectedType
             let matchesPerson = selectedPerson == nil || attachment.owner == selectedPerson
             let matchesTeam = selectedTeam == nil || attachment.team == selectedTeam
@@ -54,9 +53,18 @@ struct AttachmentsView: View {
                     onNavigateBack: navigateToRoot
                 )
             } else {
-                AttachmentFolderGridView(searchText: $searchText, onSelect: select)
+                AttachmentFolderGridView(
+                    searchText: $searchText,
+                    attachments: attachments,
+                    onSelect: select
+                )
             }
         }
+        .searchable(
+            text: $searchText,
+            placement: .toolbar,
+            prompt: selectedFolder == nil ? "Pesquisar pastas e arquivos" : "Pesquisar arquivos"
+        )
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color(nsColor: .windowBackgroundColor))
         .sheet(item: $selectedAttachment) { attachment in
@@ -66,7 +74,7 @@ struct AttachmentsView: View {
 
     private func select(_ folder: AttachmentFolder) {
         selectedFolder = folder
-        resetFilters()
+        resetFilters(keepingSearch: true)
     }
 
     private func navigateToRoot() {
@@ -74,8 +82,10 @@ struct AttachmentsView: View {
         resetFilters()
     }
 
-    private func resetFilters() {
-        searchText = ""
+    private func resetFilters(keepingSearch: Bool = false) {
+        if !keepingSearch {
+            searchText = ""
+        }
         selectedAttachmentIDs.removeAll()
         selectedType = nil
         selectedPerson = nil
@@ -85,11 +95,15 @@ struct AttachmentsView: View {
 
 private struct AttachmentFolderGridView: View {
     @Binding var searchText: String
+    let attachments: [AttachmentItem]
     let onSelect: (AttachmentFolder) -> Void
 
     private var matchingFolders: [AttachmentFolder] {
-        AttachmentFolder.allCases.filter {
-            searchText.isEmpty || $0.rawValue.localizedCaseInsensitiveContains(searchText)
+        AttachmentFolder.allCases.filter { folder in
+            folder.rawValue.localizedCaseInsensitiveContains(searchText)
+                || attachments.contains { attachment in
+                    attachment.folder == folder && attachment.matches(searchQuery: searchText)
+                }
         }
     }
 
@@ -101,8 +115,6 @@ private struct AttachmentFolderGridView: View {
                         .font(.largeTitle.weight(.regular))
 
                     Spacer(minLength: 24)
-
-                    FinderSearchControl(text: $searchText, placeholder: "Pesquisar pastas")
                 }
 
                 if matchingFolders.isEmpty {
@@ -181,7 +193,6 @@ private struct AttachmentFolderDetailView: View {
             VStack(alignment: .leading, spacing: 24) {
                 AttachmentFolderHeader(
                     folder: folder,
-                    searchText: $searchText,
                     onNavigateBack: onNavigateBack
                 )
 
@@ -209,7 +220,6 @@ private struct AttachmentFolderDetailView: View {
 
 private struct AttachmentFolderHeader: View {
     let folder: AttachmentFolder
-    @Binding var searchText: String
     let onNavigateBack: () -> Void
 
     var body: some View {
@@ -225,73 +235,7 @@ private struct AttachmentFolderHeader: View {
                 .foregroundStyle(.primary)
 
             Spacer(minLength: 24)
-
-            FinderSearchControl(text: $searchText, placeholder: "Pesquisar arquivos")
         }
-    }
-}
-
-/// Campo de busca compacto inspirado no Finder. Ele ocupa apenas o espaço da
-/// lupa até ser acionado e começa a filtrar o conteúdo enquanto o usuário digita.
-private struct FinderSearchControl: View {
-    @Binding var text: String
-    let placeholder: String
-
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @FocusState private var isFocused: Bool
-    @State private var isExpanded = false
-
-    var body: some View {
-        HStack(spacing: 8) {
-            if isExpanded {
-                Image(systemName: "magnifyingglass")
-                    .foregroundStyle(.secondary)
-
-                TextField(placeholder, text: $text)
-                    .textFieldStyle(.plain)
-                    .focused($isFocused)
-                    .onSubmit { isFocused = false }
-                    .onExitCommand(perform: collapse)
-
-                if !text.isEmpty {
-                    Button("Limpar", systemImage: "xmark.circle.fill", action: clear)
-                        .labelStyle(.iconOnly)
-                        .buttonStyle(.plain)
-                        .foregroundStyle(.secondary)
-                        .accessibilityLabel("Limpar pesquisa")
-                }
-            } else {
-                Button(action: expand) {
-                    Image(systemName: "magnifyingglass")
-                        .frame(width: 28, height: 28)
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Pesquisar")
-                .accessibilityHint("Expande o campo de pesquisa")
-            }
-        }
-        .font(.subheadline)
-        .padding(.vertical, 6)
-        .padding(.horizontal, isExpanded ? 10 : 4)
-        .frame(width: isExpanded ? 300 : 36)
-        .modifier(GlassPillModifier(tint: nil, isSelected: false))
-        .animation(reduceMotion ? nil : .snappy(duration: 0.22), value: isExpanded)
-    }
-
-    private func expand() {
-        isExpanded = true
-        DispatchQueue.main.async { isFocused = true }
-    }
-
-    private func clear() {
-        text = ""
-        isFocused = true
-    }
-
-    private func collapse() {
-        isFocused = false
-        text = ""
-        isExpanded = false
     }
 }
 

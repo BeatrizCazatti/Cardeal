@@ -46,11 +46,16 @@ struct DashboardView: View {
                 updateItem: updateItem,
                 archiveItem: archiveItem,
                 deleteItem: deleteItem,
+                unarchiveItem: unarchiveItem,
+                restoreDeletedItem: restoreDeletedItem,
                 createItem: createItem
             )
         }
         .navigationSplitViewStyle(.balanced)
-        .onAppear(perform: refreshBadgeStore)
+        .onAppear {
+            purgeExpiredDeletedItems()
+            refreshBadgeStore()
+        }
         .alert("Card arquivado", isPresented: $isArchiveUndoPresented) {
             Button("Desfazer") {
                 restoreArchivedItem()
@@ -103,13 +108,32 @@ struct DashboardView: View {
     }
 
     private func restoreArchivedItem() {
-        guard let archivedItem,
-              let columnIndex = columns.firstIndex(where: { $0.id == archivedItem.columnID }) else { return }
+        guard let archivedItem else { return }
+        unarchiveItem(archivedItem)
+    }
 
-        columns[columnIndex].restore(archivedItem.item, at: archivedItem.index)
-        archivedItems.removeAll { $0.id == archivedItem.id }
-        self.archivedItem = nil
+    private func unarchiveItem(_ storedItem: StoredBoardItem) {
+        guard restoreToBoard(storedItem) else { return }
+        archivedItems.removeAll { $0.id == storedItem.id }
+        if archivedItem?.id == storedItem.id {
+            archivedItem = nil
+        }
         refreshBadgeStore()
+    }
+
+    private func restoreDeletedItem(_ storedItem: StoredBoardItem) {
+        guard restoreToBoard(storedItem) else { return }
+        deletedItems.removeAll { $0.id == storedItem.id }
+        refreshBadgeStore()
+    }
+
+    private func restoreToBoard(_ storedItem: StoredBoardItem) -> Bool {
+        guard let columnIndex = columns.firstIndex(where: { $0.id == storedItem.columnID }) else {
+            return false
+        }
+
+        columns[columnIndex].restore(storedItem.item, at: storedItem.index)
+        return true
     }
 
     private func refreshBadgeStore() {
@@ -179,6 +203,8 @@ private struct SidebarDetailView: View {
     let updateItem: (BoardItem.ID, BoardColumn.ID, BoardItemDraft) -> Void
     let archiveItem: (BoardItem.ID, BoardColumn.ID) -> Void
     let deleteItem: (BoardItem.ID, BoardColumn.ID) -> Void
+    let unarchiveItem: (StoredBoardItem) -> Void
+    let restoreDeletedItem: (StoredBoardItem) -> Void
     let createItem: (BoardItemDraft, String, DashboardItemCategory) -> Void
 
     @ViewBuilder
@@ -197,6 +223,8 @@ private struct SidebarDetailView: View {
                 updateItem: updateItem,
                 archiveItem: archiveItem,
                 deleteItem: deleteItem,
+                unarchiveItem: unarchiveItem,
+                restoreDeletedItem: restoreDeletedItem,
                 createItem: createItem
             )
         case .attachments:
@@ -224,6 +252,8 @@ struct DashboardContentView: View {
     let updateItem: (BoardItem.ID, BoardColumn.ID, BoardItemDraft) -> Void
     let archiveItem: (BoardItem.ID, BoardColumn.ID) -> Void
     let deleteItem: (BoardItem.ID, BoardColumn.ID) -> Void
+    let unarchiveItem: (StoredBoardItem) -> Void
+    let restoreDeletedItem: (StoredBoardItem) -> Void
     let createItem: (BoardItemDraft, String, DashboardItemCategory) -> Void
 
     var body: some View {
@@ -247,12 +277,11 @@ struct DashboardContentView: View {
             .padding(24)
         }
         .background(Color(nsColor: .windowBackgroundColor))
-        .toolbar {
-            ToolbarItem(placement: .principal) {
-                SearchFieldView(text: $searchText)
-                    .frame(width: 280)
-            }
-        }
+        .searchable(
+            text: $searchText,
+            placement: .toolbar,
+            prompt: "Buscar cards, pessoas e locais"
+        )
         .navigationTitle("")
     }
 
@@ -263,15 +292,28 @@ struct DashboardContentView: View {
             BoardView(
                 columns: columns,
                 filter: category,
+                searchText: searchText,
                 markAsReviewed: markAsReviewed,
                 updateItem: updateItem,
                 archiveItem: archiveItem,
                 deleteItem: deleteItem
             )
         case .archived:
-            StoredItemsBoardView(items: archivedItems, title: "Arquivado em")
+            StoredItemsBoardView(
+                items: archivedItems.filter { $0.item.matches(searchQuery: searchText) },
+                title: "Arquivado em",
+                actionTitle: "Desarquivar",
+                actionSystemImage: "tray.and.arrow.up",
+                action: unarchiveItem
+            )
         case .deleted:
-            StoredItemsBoardView(items: deletedItems, title: "Excluído em")
+            StoredItemsBoardView(
+                items: deletedItems.filter { $0.item.matches(searchQuery: searchText) },
+                title: "Excluído em",
+                actionTitle: "Restaurar",
+                actionSystemImage: "arrow.uturn.backward",
+                action: restoreDeletedItem
+            )
         }
     }
 
@@ -511,6 +553,7 @@ struct NewBoardItemSheet: View {
 struct BoardView: View {
     let columns: [BoardColumn]
     let filter: DashboardItemCategory?
+    let searchText: String
     let markAsReviewed: (BoardItem.ID, BoardColumn.ID) -> Void
     let updateItem: (BoardItem.ID, BoardColumn.ID, BoardItemDraft) -> Void
     let archiveItem: (BoardItem.ID, BoardColumn.ID) -> Void
@@ -521,7 +564,7 @@ struct BoardView: View {
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             LazyHStack(alignment: .top, spacing: 32) {
-                ForEach(columns.map { $0.filtered(by: filter) }) { column in
+                ForEach(columns.map { $0.filtered(by: filter, matching: searchText) }) { column in
                     BoardColumnView(
                         column: column,
                         onSelectTeam: {
@@ -559,7 +602,7 @@ struct BoardView: View {
             }
             Button("Cancelar", role: .cancel) {}
         } message: { pendingDeletion in
-            Text("\"\(pendingDeletion.item.title)\" será excluído permanentemente.")
+            Text("\"\(pendingDeletion.item.title)\" será movido para Excluídos e poderá ser restaurado por até 7 dias.")
         }
     }
 }
@@ -567,6 +610,9 @@ struct BoardView: View {
 private struct StoredItemsBoardView: View {
     let items: [StoredBoardItem]
     let title: String
+    let actionTitle: String
+    let actionSystemImage: String
+    let action: (StoredBoardItem) -> Void
 
     var body: some View {
         if items.isEmpty {
@@ -581,7 +627,14 @@ private struct StoredItemsBoardView: View {
                     ForEach(teamNames, id: \.self) { teamName in
                         let teamItems = items.filter { $0.teamName == teamName }
                         if !teamItems.isEmpty {
-                            StoredItemsColumnView(teamName: teamName, items: teamItems, timestampTitle: title)
+                            StoredItemsColumnView(
+                                teamName: teamName,
+                                items: teamItems,
+                                timestampTitle: title,
+                                actionTitle: actionTitle,
+                                actionSystemImage: actionSystemImage,
+                                action: action
+                            )
                                 .frame(width: 320)
                         }
                     }
@@ -602,6 +655,9 @@ private struct StoredItemsColumnView: View {
     let teamName: String
     let items: [StoredBoardItem]
     let timestampTitle: String
+    let actionTitle: String
+    let actionSystemImage: String
+    let action: (StoredBoardItem) -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -610,7 +666,13 @@ private struct StoredItemsColumnView: View {
                 .foregroundStyle(.primaryText)
             Divider()
             ForEach(items) { storedItem in
-                StoredBoardItemCard(item: storedItem, timestampTitle: timestampTitle)
+                StoredBoardItemCard(
+                    item: storedItem,
+                    timestampTitle: timestampTitle,
+                    actionTitle: actionTitle,
+                    actionSystemImage: actionSystemImage,
+                    action: { action(storedItem) }
+                )
             }
         }
     }
@@ -619,6 +681,9 @@ private struct StoredItemsColumnView: View {
 private struct StoredBoardItemCard: View {
     let item: StoredBoardItem
     let timestampTitle: String
+    let actionTitle: String
+    let actionSystemImage: String
+    let action: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -642,6 +707,9 @@ private struct StoredBoardItemCard: View {
             )
             .font(.caption)
             .foregroundStyle(.secondaryText)
+            Button(actionTitle, systemImage: actionSystemImage, action: action)
+                .buttonStyle(.bordered)
+                .controlSize(.small)
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -978,25 +1046,6 @@ struct FooterView: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
-    }
-}
-
-// MARK: - Campo de busca da toolbar
-
-struct SearchFieldView: View {
-    @Binding var text: String
-
-    var body: some View {
-        HStack(spacing: 6) {
-            Image(systemName: "magnifyingglass")
-                .foregroundStyle(.secondary)
-            TextField("Buscar informações e arquivos...", text: $text)
-                .textFieldStyle(.plain)
-        }
-        .font(.subheadline)
-        .padding(.vertical, 6)
-        .padding(.horizontal, 10)
-        .modifier(GlassPillModifier(tint: nil, isSelected: false))
     }
 }
 
