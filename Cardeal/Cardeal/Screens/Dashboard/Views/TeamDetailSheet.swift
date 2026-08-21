@@ -133,7 +133,7 @@ struct TeamDetailSheet: View {
                     select(tab)
                 } label: {
                     Text(tab.rawValue)
-                        .foregroundStyle(selectedTab == tab ? Color.tabButtonSelectedText : Color.tabButtonText)
+                        .foregroundStyle(selectedTab == tab ? Color.Token.textOnAccent : Color.Token.textNavigation)
                         .font(.title3.weight(selectedTab == tab ? .semibold : .regular))
                         .padding(.horizontal, 20)
                         .frame(minHeight: 44)
@@ -286,9 +286,9 @@ private struct TeamTimelineRow: View {
 
     private var categoryColor: Color {
         switch activity.category {
-        case .decision: .green
-        case .task: .blue
-        case .meeting: .orange
+        case .decision: Color.Token.statusSuccess
+        case .task: Color.Token.interactiveAccent
+        case .meeting: Color.Token.statusWarning
         }
     }
 
@@ -677,20 +677,20 @@ private struct ProfileAvatar: View {
 
     private var color: Color {
         switch name.unicodeScalars.first?.value ?? 0 {
-        case 65...70: .cardealPurple
-        case 71...76: .cardealGreen
-        case 77...82: .cardealOrange
-        default: .cardealBlue
+        case 65...70: Color.Token.themeStandardAccent
+        case 71...76: Color.Token.statusSuccess
+        case 77...82: Color.Token.statusWarning
+        default: Color.Token.interactiveAccent
         }
     }
 
     var body: some View {
         Circle()
-            .fill(highlighted ? Color.primaryAction : color.opacity(0.20))
+            .fill(highlighted ? Color.Token.interactiveAccent : color.opacity(0.20))
             .overlay {
                 Text(initials)
                     .font(size >= 60 ? .title3.weight(.semibold) : .caption.weight(.semibold))
-                    .foregroundStyle(highlighted ? .white : color)
+                    .foregroundStyle(highlighted ? Color.Token.textOnAccent : color)
             }
             .frame(width: size, height: size)
     }

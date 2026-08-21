@@ -276,7 +276,7 @@ struct DashboardContentView: View {
             }
             .padding(24)
         }
-        .background(Color(nsColor: .windowBackgroundColor))
+        .background(Color.Token.backgroundPrimary)
         .searchable(
             text: $searchText,
             placement: .toolbar,
@@ -329,7 +329,7 @@ struct GreetingHeaderView: View {
             Text("Olá, " + name + "!")
                 .font(.title.weight(.regular))
         )
-        .foregroundStyle(.title)
+        .foregroundStyle(Color.Token.textBrand)
     }
 }
 
@@ -368,7 +368,7 @@ struct WeekNavigatorView: View {
             }
             .buttonStyle(.plain)
         }
-        .foregroundStyle(.blue)
+        .foregroundStyle(Color.Token.interactiveAccent)
     }
     private var selectedWeekText: String {
         let start = selection.start.formatted(.dateTime.locale(Locale(identifier: "pt_BR")).day().month(.abbreviated))
@@ -461,14 +461,14 @@ struct DashboardToolbarPrimaryButton: View {
                         .font(.title3.weight(.regular))
                 }
             }
-            .foregroundStyle(.white)
+            .foregroundStyle(Color.Token.textOnAccent)
             .frame(height: 48)
             .padding(.horizontal, 28)
-            .background(Capsule().fill(.primaryAction))
+            .background(Capsule().fill(Color.Token.interactiveAccent))
             .contentShape(Capsule())
         }
         .buttonStyle(.plain)
-        .shadow(color: .primaryAction.opacity(0.22), radius: 10, y: 4)
+        .shadow(color: Color.Token.interactiveAccent.opacity(0.22), radius: 10, y: 4)
     }
 }
 
@@ -663,7 +663,7 @@ private struct StoredItemsColumnView: View {
         VStack(alignment: .leading, spacing: 12) {
             Text(teamName)
                 .font(.headline)
-                .foregroundStyle(.primaryText)
+                .foregroundStyle(Color.Token.textPrimary)
             Divider()
             ForEach(items) { storedItem in
                 StoredBoardItemCard(
@@ -689,24 +689,24 @@ private struct StoredBoardItemCard: View {
         VStack(alignment: .leading, spacing: 10) {
             Text(item.item.title)
                 .font(.subheadline.weight(.semibold))
-                .foregroundStyle(.primaryText)
+                .foregroundStyle(Color.Token.textPrimary)
             if let description = item.item.descriptionText {
                 Text(description)
                     .font(.caption)
-                    .foregroundStyle(.secondaryText)
+                    .foregroundStyle(Color.Token.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
             if !item.item.assignees.isEmpty {
                 Text(item.item.assignees.map(\.name).joined(separator: ", "))
                     .font(.caption)
-                    .foregroundStyle(.secondaryText)
+                    .foregroundStyle(Color.Token.textSecondary)
             }
             Label(
                 "\(timestampTitle) \(item.storedAt.formatted(.dateTime.day().month(.abbreviated).year().hour().minute()))",
                 systemImage: "calendar"
             )
             .font(.caption)
-            .foregroundStyle(.secondaryText)
+            .foregroundStyle(Color.Token.textSecondary)
             Button(actionTitle, systemImage: actionSystemImage, action: action)
                 .buttonStyle(.bordered)
                 .controlSize(.small)
@@ -737,7 +737,7 @@ struct BoardColumnView: View {
             Button(action: onSelectTeam) {
                 Text(column.title)
                     .font(.headline)
-                    .foregroundStyle(.primaryText)
+                    .foregroundStyle(Color.Token.textPrimary)
                 Spacer()
                 Image(systemName: "arrow.down.left.and.arrow.up.right")
             }
@@ -769,10 +769,10 @@ struct EmptyColumnView: View {
         VStack(spacing: 12) {
             Image(systemName: "wind")
                 .font(.largeTitle.weight(.light))
-                .foregroundStyle(.secondaryText)
+                .foregroundStyle(Color.Token.textSecondary)
             Text("Tudo calmo por aqui!")
                 .font(.subheadline)
-                .foregroundStyle(.secondaryText)
+                .foregroundStyle(Color.Token.textSecondary)
         }
         .frame(maxWidth: .infinity, minHeight: 160)
         .padding(.top, 24)
@@ -792,30 +792,26 @@ struct BoardItemCardView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            if let badgeCount = item.badgeCount {
+            if item.isAwaitingReview {
                 HStack(alignment: .top) {
-                    CountBadge(count: badgeCount)
-                    Spacer()
+                    Text(item.title)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(Color.Token.textPrimary)
+                        .lineLimit(2)
+
+                    Spacer(minLength: 8)
+
                     UnreadCardActionsView {
                         isEditing = true
                     } markAsReviewed: {
                         markAsReviewed(item.id)
-                    } archive: {
-                        archiveItem(item.id)
-                    } requestDeletion: {
-                        requestDeletion(item)
                     }
                 }
-
-                Text(item.title)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.primaryText)
-                    .lineLimit(2)
             } else {
                 HStack(alignment: .top) {
                     Text(item.title)
                         .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(.primaryText)
+                        .foregroundStyle(Color.Token.textPrimary)
                         .lineLimit(2)
 
                     Spacer(minLength: 8)
@@ -843,7 +839,7 @@ struct BoardItemCardView: View {
             if let description = item.descriptionText {
                 Text(description)
                     .font(.caption)
-                    .foregroundStyle(.secondaryText)
+                    .foregroundStyle(Color.Token.textSecondary)
                     .lineLimit(3)
 
                 if description.count > 120 {
@@ -878,13 +874,7 @@ struct BoardItemCardView: View {
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
         .frame(height: 180, alignment: .topLeading)
-        .modifier(GlassCardModifier())
-        .overlay {
-            if item.badgeCount != nil {
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .stroke(Color.accentColor, style: StrokeStyle(lineWidth: 1, dash: [4, 5]))
-            }
-        }
+        .modifier(BoardItemCardAppearanceModifier(isAwaitingReview: item.isAwaitingReview))
         .onHover { hovering in
             withAnimation(.easeInOut(duration: 0.15)) { isHovering = hovering }
         }
@@ -900,27 +890,45 @@ struct BoardItemCardView: View {
 private struct UnreadCardActionsView: View {
     let edit: () -> Void
     let markAsReviewed: () -> Void
-    let archive: () -> Void
-    let requestDeletion: () -> Void
 
     var body: some View {
-        HStack(spacing: 14) {
+        HStack(spacing: 10) {
             Button("Editar", systemImage: "pencil", action: edit)
                 .labelStyle(.iconOnly)
+                .foregroundStyle(Color.accentColor)
+                .frame(width: 44, height: 44)
+                .background(Color.Token.surfaceRaised, in: Circle())
             Button("Marcar como revisado", systemImage: "checkmark", action: markAsReviewed)
                 .labelStyle(.iconOnly)
-            Menu {
-                Button("Editar", systemImage: "pencil", action: edit)
-                Button("Arquivar", systemImage: "archivebox", action: archive)
-                Button("Excluir", systemImage: "trash", role: .destructive, action: requestDeletion)
-            } label: {
-                Image(systemName: "ellipsis")
-                    .rotationEffect(.degrees(90))
-            }
-            .menuStyle(.borderlessButton)
+                .foregroundStyle(Color.Token.textOnAccent)
+                .frame(width: 44, height: 44)
+                .background(Color.Token.statusSuccess, in: Circle())
         }
-        .foregroundStyle(.primaryAction)
         .buttonStyle(.plain)
+    }
+}
+
+private struct BoardItemCardAppearanceModifier: ViewModifier {
+    let isAwaitingReview: Bool
+
+    func body(content: Content) -> some View {
+        if isAwaitingReview {
+            content
+                .background(
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .fill(Color.Token.surfaceAttention)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .stroke(
+                            Color.Token.statusWarning,
+                            style: StrokeStyle(lineWidth: 2, dash: [10, 8])
+                        )
+                )
+                .shadow(color: .black.opacity(0.08), radius: 8, y: 3)
+        } else {
+            content.modifier(GlassCardModifier())
+        }
     }
 }
 
@@ -1026,10 +1034,10 @@ private struct MetadataRow: View {
         HStack(spacing: 6) {
             Image(systemName: systemImage)
                 .font(.caption)
-                .foregroundStyle(.iconsDashboard)
+                .foregroundStyle(Color.Token.iconAccent)
             Text(text)
                 .font(.caption.weight(highlighted ? .semibold : .regular))
-                .foregroundStyle(highlighted ? .changeText : .secondaryText)
+                .foregroundStyle(highlighted ? Color.Token.statusAttention : Color.Token.textSecondary)
         }
     }
 }

@@ -9,17 +9,17 @@ struct ToolbarIconButton: View {
     var body: some View {
         Button(action: action) {
             ZStack {
-                Circle().fill(.primaryAction)
+                Circle().fill(Color.Token.interactiveAccent)
 
                 Image(systemName: systemImage)
                     .font(.title3.weight(.medium))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(Color.Token.textOnAccent)
             }
             .frame(width: 48, height: 48)
             .contentShape(Circle())
         }
         .buttonStyle(.plain)
-        .shadow(color: Color.primaryAction.opacity(0.22), radius: 10, y: 4)
+        .shadow(color: Color.Token.interactiveAccent.opacity(0.22), radius: 10, y: 4)
         .accessibilityLabel(accessibilityLabel)
     }
 }

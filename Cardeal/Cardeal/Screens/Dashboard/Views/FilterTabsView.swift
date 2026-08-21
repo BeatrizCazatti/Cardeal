@@ -55,7 +55,7 @@ private struct FilterTabButton: View {
     var body: some View {
         Button(action: action) {
             Text(tab.title)
-                .foregroundStyle(isSelected ? Color.tabButtonSelectedText : Color.tabButtonText)
+                .foregroundStyle(isSelected ? Color.Token.textOnAccent : Color.Token.textNavigation)
                 .font(.title3.weight(isSelected ? .semibold : .regular))
                 .lineLimit(1)
                 .padding(.horizontal, 20)
@@ -66,7 +66,7 @@ private struct FilterTabButton: View {
         .background {
             if isSelected {
                 Capsule(style: .continuous)
-                    .fill(Color.primaryAction)
+                    .fill(Color.Token.interactiveAccent)
             }
         }
         .overlay(alignment: .topTrailing) {
@@ -95,9 +95,9 @@ struct CountBadge: View {
         Text("\(count)")
             .font(diameter >= 30 ? .subheadline.weight(.bold) : .caption2.weight(.bold))
             .monospacedDigit()
-            .foregroundStyle(.white)
+            .foregroundStyle(Color.Token.textOnAccent)
             .frame(width: diameter, height: diameter)
-            .background(Circle().fill(Color.counterBadge.gradient))
+            .background(Circle().fill(Color.Token.statusNotification.gradient))
             .accessibilityLabel("\(count) itens pendentes")
     }
 }

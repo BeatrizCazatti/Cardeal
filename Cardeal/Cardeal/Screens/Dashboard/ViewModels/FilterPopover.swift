@@ -104,7 +104,7 @@ struct FilterSearchField: View {
         .font(.caption)
         .padding(.horizontal, 10)
         .frame(height: 24)
-        .background(Capsule().fill(Color.primaryAction.opacity(0.09)))
+        .background(Capsule().fill(Color.Token.interactiveAccent.opacity(0.09)))
     }
 }
 
@@ -122,10 +122,10 @@ struct FilterChip: View {
                         .font(.caption2.weight(.bold))
                 } else {
                     Circle()
-                        .fill(isSelected ? Color.white : Color.primaryAction.opacity(0.28))
+                        .fill(isSelected ? Color.Token.textOnAccent : Color.Token.interactiveAccent.opacity(0.28))
                         .overlay {
                             if !isSelected {
-                                Circle().stroke(Color.primaryAction.opacity(0.8), lineWidth: 1)
+                                Circle().stroke(Color.Token.interactiveAccent.opacity(0.8), lineWidth: 1)
                             }
                         }
                         .frame(width: 10, height: 10)
@@ -135,12 +135,12 @@ struct FilterChip: View {
                     .lineLimit(1)
             }
             .font(.caption)
-            .foregroundStyle(isSelected ? .white : .primary)
+            .foregroundStyle(isSelected ? Color.Token.textOnAccent : .primary)
             .padding(.horizontal, 10)
             .frame(minHeight: 24)
         }
         .buttonStyle(.plain)
-        .background(Capsule().fill(isSelected ? Color.primaryAction : Color.primaryAction.opacity(0.09)))
+        .background(Capsule().fill(isSelected ? Color.Token.interactiveAccent : Color.Token.interactiveAccent.opacity(0.09)))
         .accessibilityValue(isSelected ? "Selecionado" : "Não selecionado")
     }
 }

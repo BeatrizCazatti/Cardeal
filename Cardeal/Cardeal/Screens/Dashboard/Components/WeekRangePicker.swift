@@ -45,13 +45,13 @@ struct WeekRangePicker: View {
         VStack(alignment: .leading, spacing: 0) {
             Text("Selecione um período")
                 .font(.title2.weight(.semibold))
-                .foregroundStyle(.primaryAction)
+                .foregroundStyle(Color.Token.interactiveAccent)
                 .padding(.bottom, 28)
 
             HStack {
                 Text(monthTitle)
                     .font(.title3.weight(.semibold))
-                    .foregroundStyle(.primaryText)
+                    .foregroundStyle(Color.Token.textPrimary)
                 Spacer()
                 monthButton(systemImage: "chevron.left", label: "Mês anterior") {
                     changeMonth(by: -1)
@@ -66,7 +66,7 @@ struct WeekRangePicker: View {
                 ForEach(Array(weekdaySymbols.enumerated()), id: \.offset) { _, symbol in
                     Text(symbol)
                         .font(.subheadline.weight(.medium))
-                        .foregroundStyle(Color.primaryAction.opacity(0.72))
+                        .foregroundStyle(Color.Token.interactiveAccent.opacity(0.72))
                         .frame(height: 36)
                 }
 
@@ -82,7 +82,7 @@ struct WeekRangePicker: View {
             .padding(8)
             .background(
                 RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .fill(Color.primaryAction.opacity(0.045))
+                    .fill(Color.Token.interactiveAccent.opacity(0.045))
             )
         }
         .padding(24)
@@ -179,8 +179,8 @@ private extension WeekRangePicker {
                 .contentShape(Circle())
         }
         .buttonStyle(.plain)
-        .foregroundStyle(.primaryAction)
-        .background(Capsule().fill(Color.primaryAction.opacity(0.09)))
+        .foregroundStyle(Color.Token.interactiveAccent)
+        .background(Capsule().fill(Color.Token.interactiveAccent.opacity(0.09)))
         .accessibilityLabel(label)
     }
 }
@@ -230,15 +230,15 @@ private struct CalendarDayButton: View {
             switch state {
             case .middle:
                 Rectangle()
-                    .fill(Color.primaryAction.opacity(0.14))
+                    .fill(Color.Token.interactiveAccent.opacity(0.14))
             case .start:
                 Rectangle()
-                    .fill(Color.primaryAction.opacity(0.14))
+                    .fill(Color.Token.interactiveAccent.opacity(0.14))
                     .frame(width: halfWidth)
                     .frame(maxWidth: .infinity, alignment: .trailing)
             case .end:
                 Rectangle()
-                    .fill(Color.primaryAction.opacity(0.14))
+                    .fill(Color.Token.interactiveAccent.opacity(0.14))
                     .frame(width: halfWidth)
                     .frame(maxWidth: .infinity, alignment: .leading)
             case .none, .single:
@@ -252,12 +252,12 @@ private struct CalendarDayButton: View {
     private var dayIndicator: some View {
         ZStack {
             if state == .start || state == .end || state == .single {
-                Circle().fill(.primaryAction)
+                Circle().fill(Color.Token.interactiveAccent)
             } else if isToday {
-                Circle().strokeBorder(.primaryAction, lineWidth: 1.5)
+                Circle().strokeBorder(Color.Token.interactiveAccent, lineWidth: 1.5)
                     .padding(6)
             } else if isHovering {
-                Capsule().fill(Color.primaryAction.opacity(0.08))
+                Capsule().fill(Color.Token.interactiveAccent.opacity(0.08))
                     .padding(.horizontal, 2)
                     .padding(.vertical, 4)
             }
@@ -267,8 +267,8 @@ private struct CalendarDayButton: View {
 
     private var foregroundColor: Color {
         switch state {
-        case .start, .end, .single: .white
-        case .none, .middle: day.belongsToDisplayedMonth ? .primaryText : .secondaryText.opacity(0.48)
+        case .start, .end, .single: Color.Token.textOnAccent
+        case .none, .middle: day.belongsToDisplayedMonth ? Color.Token.textPrimary : Color.Token.textSecondary.opacity(0.48)
         }
     }
 

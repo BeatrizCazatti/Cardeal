@@ -96,6 +96,7 @@ struct BoardItem: Identifiable, Hashable {
     init(draft: BoardItemDraft, category: DashboardItemCategory) {
         self.init(
             title: draft.title,
+            badgeCount: 1,
             assignees: draft.assignees,
             dateText: draft.dateText.emptyAsNil,
             location: draft.location.emptyAsNil,
@@ -106,6 +107,10 @@ struct BoardItem: Identifiable, Hashable {
 
     mutating func markAsReviewed() {
         badgeCount = nil
+    }
+
+    var isAwaitingReview: Bool {
+        badgeCount != nil
     }
 
     mutating func apply(_ draft: BoardItemDraft) {

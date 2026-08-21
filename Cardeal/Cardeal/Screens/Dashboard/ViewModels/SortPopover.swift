@@ -68,7 +68,7 @@ struct SortOptionRow: View {
 
                 Spacer()
             }
-            .foregroundStyle(isSelected ? .white : .primary)
+            .foregroundStyle(isSelected ? Color.Token.textOnAccent : .primary)
             .frame(
                 maxWidth: .infinity,
                 minHeight: 32
@@ -78,7 +78,7 @@ struct SortOptionRow: View {
         .buttonStyle(.plain)
         .padding(.horizontal, 4)
         .background(
-            Capsule().fill(isSelected ? Color.primaryAction : Color.primaryAction.opacity(0.09))
+            Capsule().fill(isSelected ? Color.Token.interactiveAccent : Color.Token.interactiveAccent.opacity(0.09))
         )
         .accessibilityValue(isSelected ? "Selecionado" : "Não selecionado")
     }

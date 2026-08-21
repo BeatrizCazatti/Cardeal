@@ -2,10 +2,10 @@ import SwiftUI
 
 @main
 struct CardealApp: App {
-    @AppStorage(AppTheme.storageKey) private var storedTheme = AppTheme.violet.rawValue
+    @AppStorage(AppTheme.storageKey) private var storedTheme = AppTheme.defaultTheme.rawValue
 
     private var theme: AppTheme {
-        AppTheme(rawValue: storedTheme) ?? .violet
+        AppTheme(storedValue: storedTheme)
     }
 
     var body: some Scene {
