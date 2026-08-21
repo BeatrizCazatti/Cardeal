@@ -66,7 +66,7 @@ struct TeamDetailSheet: View {
             }
             .background(TeamDetailHeaderBackground(theme: theme))
 
-            if let displayedPinnedActivity {
+            if selectedTab == .timeline, let displayedPinnedActivity {
                 PinnedActivityBanner(
                     activity: displayedPinnedActivity,
                     position: displayedPinnedIndex + 1,
@@ -293,13 +293,13 @@ private struct TeamTimelineRow: View {
     }
 
     var body: some View {
-        HStack(alignment: .top, spacing: 24) {
-            VStack(alignment: .trailing, spacing: 10) {
+        HStack(alignment: .center, spacing: 24) {
+            VStack(alignment: .leading, spacing: 10) {
                 Text(activity.date)
                     .font(.subheadline)
                     .foregroundStyle(theme.accentColor.opacity(0.72))
             }
-            .frame(width: 180, alignment: .trailing)
+            .frame(width: 180, alignment: .center)
 
             VStack(spacing: 0) {
                 Circle()
@@ -313,7 +313,7 @@ private struct TeamTimelineRow: View {
             .frame(minHeight: 146, alignment: .top)
 
             VStack(alignment: .leading, spacing: 12) {
-                Label(activity.category.rawValue, systemImage: activity.category.systemImage)
+                Text(activity.category.rawValue)
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(categoryColor)
                 Text(activity.title)
@@ -338,8 +338,8 @@ private struct TeamTimelineRow: View {
                 }
             }
             .padding(.bottom, 28)
-
-            Spacer(minLength: 12)
+            .padding(.top, 12)
+            .frame(maxWidth: .infinity, alignment: .leading)
 
             if isHovering || isPinned {
                 Button(action: togglePin) {
@@ -358,6 +358,7 @@ private struct TeamTimelineRow: View {
                     .frame(width: 36, height: 36)
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 12)
         .background {
             RoundedRectangle(cornerRadius: 16, style: .continuous)
@@ -536,6 +537,13 @@ private struct TeamPeopleView: View {
                 .padding(36)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .contentShape(Rectangle())
+            .gesture(
+                TapGesture().onEnded {
+                    selectedMember = nil
+                },
+                including: .gesture
+            )
 
             if let selectedMember {
                 Divider()
