@@ -15,13 +15,27 @@ struct TeamDetailSheet: View {
     @Environment(\.appTheme) private var theme
     @State private var selectedTab: Tab = .timeline
     @State private var selectedMember: TeamMember?
-    @State private var favoriteActivityIDs = Set<TeamActivity.ID>()
-    @State private var featuredFavoriteID: TeamActivity.ID?
+    @State private var pinnedActivityIDs: [TeamActivity.ID] = []
+    @State private var displayedPinnedIndex = 0
+    @State private var pendingPinID: TeamActivity.ID?
+    @State private var isPinnedListPresented = false
     @State private var timelineScrollTarget: TeamActivity.ID?
 
-    private var featuredFavorite: TeamActivity? {
-        guard let featuredFavoriteID else { return nil }
-        return team.timeline.first { $0.id == featuredFavoriteID }
+    private var displayedPinnedActivity: TeamActivity? {
+        guard pinnedActivityIDs.indices.contains(displayedPinnedIndex) else { return nil }
+        let activityID = pinnedActivityIDs[displayedPinnedIndex]
+        return team.timeline.first { $0.id == activityID }
+    }
+
+    private var pendingPinActivity: TeamActivity? {
+        guard let pendingPinID else { return nil }
+        return team.timeline.first { $0.id == pendingPinID }
+    }
+
+    private var pinnedActivities: [TeamActivity] {
+        pinnedActivityIDs.compactMap { activityID in
+            team.timeline.first { $0.id == activityID }
+        }
     }
 
     var body: some View {
@@ -52,10 +66,15 @@ struct TeamDetailSheet: View {
             }
             .background(TeamDetailHeaderBackground(theme: theme))
 
-            if let featuredFavorite {
-                FavoriteActivityBanner(activity: featuredFavorite) {
-                    navigateToFavorite(featuredFavorite.id)
-                }
+            if let displayedPinnedActivity {
+                PinnedActivityBanner(
+                    activity: displayedPinnedActivity,
+                    position: displayedPinnedIndex + 1,
+                    total: pinnedActivityIDs.count,
+                    navigate: { navigateToActivity(displayedPinnedActivity.id) },
+                    showPinnedList: { isPinnedListPresented = true },
+                    move: movePinnedBanner
+                )
                 .padding(.horizontal, 36)
                 .padding(.vertical, 12)
             }
@@ -68,10 +87,10 @@ struct TeamDetailSheet: View {
                     TeamTimelineView(
                         activities: team.timeline,
                         members: team.members,
-                        favoriteActivityIDs: $favoriteActivityIDs,
+                        pinnedActivityIDs: $pinnedActivityIDs,
                         scrollTarget: $timelineScrollTarget
                     ) { activityID in
-                        toggleFavorite(activityID)
+                        togglePin(activityID)
                     }
                 case .people:
                     TeamPeopleView(members: team.members, selectedMember: $selectedMember)
@@ -79,6 +98,32 @@ struct TeamDetailSheet: View {
             }
         }
         .frame(minWidth: 960, idealWidth: 1_160, minHeight: 620, idealHeight: 720)
+        .alert("Limite de tópicos fixados", isPresented: Binding(
+            get: { pendingPinID != nil },
+            set: { if !$0 { pendingPinID = nil } }
+        ), presenting: pendingPinActivity) { activity in
+            Button("Substituir o mais antigo") {
+                replaceOldestPin(with: activity.id)
+            }
+            Button("Cancelar", role: .cancel) {
+                pendingPinID = nil
+            }
+        } message: { activity in
+            Text("Você já tem 4 tópicos fixados. Deseja substituir o tópico fixado há mais tempo por “\(activity.title)”?" )
+        }
+        .sheet(isPresented: $isPinnedListPresented) {
+            PinnedActivitiesSheet(
+                activities: pinnedActivities,
+                onSelect: { activityID in
+                    if let index = pinnedActivityIDs.firstIndex(of: activityID) {
+                        displayedPinnedIndex = index
+                    }
+                    isPinnedListPresented = false
+                    navigateToActivity(activityID)
+                },
+                onUnpin: unpin
+            )
+        }
     }
 
     private var tabSelector: some View {
@@ -123,19 +168,44 @@ struct TeamDetailSheet: View {
         }
     }
 
-    private func toggleFavorite(_ activityID: TeamActivity.ID) {
-        if favoriteActivityIDs.contains(activityID) {
-            favoriteActivityIDs.remove(activityID)
-            if featuredFavoriteID == activityID {
-                featuredFavoriteID = favoriteActivityIDs.first
-            }
+    private func togglePin(_ activityID: TeamActivity.ID) {
+        if pinnedActivityIDs.contains(activityID) {
+            unpin(activityID)
+        } else if pinnedActivityIDs.count < 4 {
+            pinnedActivityIDs.append(activityID)
+            displayedPinnedIndex = pinnedActivityIDs.count - 1
         } else {
-            favoriteActivityIDs.insert(activityID)
-            featuredFavoriteID = activityID
+            pendingPinID = activityID
         }
     }
 
-    private func navigateToFavorite(_ activityID: TeamActivity.ID) {
+    private func replaceOldestPin(with activityID: TeamActivity.ID) {
+        guard !pinnedActivityIDs.isEmpty else { return }
+        pinnedActivityIDs.removeFirst()
+        pinnedActivityIDs.append(activityID)
+        displayedPinnedIndex = pinnedActivityIDs.count - 1
+        pendingPinID = nil
+    }
+
+    private func unpin(_ activityID: TeamActivity.ID) {
+        guard let index = pinnedActivityIDs.firstIndex(of: activityID) else { return }
+        pinnedActivityIDs.remove(at: index)
+
+        if pinnedActivityIDs.isEmpty {
+            displayedPinnedIndex = 0
+        } else if index < displayedPinnedIndex {
+            displayedPinnedIndex -= 1
+        } else if displayedPinnedIndex >= pinnedActivityIDs.count {
+            displayedPinnedIndex = pinnedActivityIDs.count - 1
+        }
+    }
+
+    private func movePinnedBanner(by offset: Int) {
+        guard pinnedActivityIDs.count > 1 else { return }
+        displayedPinnedIndex = (displayedPinnedIndex + offset + pinnedActivityIDs.count) % pinnedActivityIDs.count
+    }
+
+    private func navigateToActivity(_ activityID: TeamActivity.ID) {
         if selectedTab != .timeline {
             select(.timeline)
         }
@@ -151,9 +221,9 @@ struct TeamDetailSheet: View {
 private struct TeamTimelineView: View {
     let activities: [TeamActivity]
     let members: [TeamMember]
-    @Binding var favoriteActivityIDs: Set<TeamActivity.ID>
+    @Binding var pinnedActivityIDs: [TeamActivity.ID]
     @Binding var scrollTarget: TeamActivity.ID?
-    let toggleFavorite: (TeamActivity.ID) -> Void
+    let togglePin: (TeamActivity.ID) -> Void
     @State private var highlightedActivityID: TeamActivity.ID?
 
     var body: some View {
@@ -164,11 +234,11 @@ private struct TeamTimelineView: View {
                         TeamTimelineRow(
                             activity: activity,
                             members: members,
-                            isFavorite: favoriteActivityIDs.contains(activity.id),
+                            isPinned: pinnedActivityIDs.contains(activity.id),
                             isHighlighted: highlightedActivityID == activity.id,
                             showsConnector: index < activities.count - 1
                         ) {
-                            toggleFavorite(activity.id)
+                            togglePin(activity.id)
                         }
                         .id(activity.id)
                     }
@@ -207,11 +277,12 @@ private struct TeamTimelineView: View {
 private struct TeamTimelineRow: View {
     let activity: TeamActivity
     let members: [TeamMember]
-    let isFavorite: Bool
+    let isPinned: Bool
     let isHighlighted: Bool
     let showsConnector: Bool
-    let toggleFavorite: () -> Void
+    let togglePin: () -> Void
     @Environment(\.appTheme) private var theme
+    @State private var isHovering = false
 
     private var categoryColor: Color {
         switch activity.category {
@@ -270,44 +341,69 @@ private struct TeamTimelineRow: View {
 
             Spacer(minLength: 12)
 
-            Button(action: toggleFavorite) {
-                Image(systemName: isFavorite ? "star.fill" : "star")
-                    .font(.title3.weight(.medium))
-                    .foregroundStyle(isFavorite ? .yellow : theme.accentColor)
+            if isHovering || isPinned {
+                Button(action: togglePin) {
+                    Image(systemName: isPinned ? "pin.fill" : "pin")
+                        .font(.title3.weight(.medium))
+                        .foregroundStyle(isPinned ? theme.accentColor : .secondary)
+                        .frame(width: 36, height: 36)
+                        .contentShape(Circle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(isPinned ? "Desfixar tópico" : "Fixar tópico")
+                .accessibilityValue(isPinned ? "Fixado" : "Não fixado")
+                .transition(.opacity.combined(with: .scale(scale: 0.9)))
+            } else {
+                Color.clear
                     .frame(width: 36, height: 36)
-                    .contentShape(Circle())
             }
-            .buttonStyle(.plain)
-            .accessibilityLabel(isFavorite ? "Remover dos favoritos" : "Adicionar aos favoritos")
-            .accessibilityValue(isFavorite ? "Favorito" : "Não favorito")
         }
         .padding(.horizontal, 12)
         .background {
             RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(isHighlighted ? theme.accentColor.opacity(0.12) : .clear)
+                .fill((isHighlighted || isHovering) ? theme.accentColor.opacity(isHighlighted ? 0.12 : 0.07) : .clear)
         }
         .overlay {
             RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(isHighlighted ? theme.accentColor.opacity(0.45) : .clear, lineWidth: 1)
+                .stroke((isHighlighted || isHovering) ? theme.accentColor.opacity(isHighlighted ? 0.45 : 0.24) : .clear, lineWidth: 1)
+        }
+        .onHover { hovering in
+            withAnimation(.easeInOut(duration: 0.16)) {
+                isHovering = hovering
+            }
         }
         .animation(.easeInOut(duration: 0.2), value: isHighlighted)
     }
 }
 
-private struct FavoriteActivityBanner: View {
+private struct PinnedActivityBanner: View {
     let activity: TeamActivity
-    let action: () -> Void
+    let position: Int
+    let total: Int
+    let navigate: () -> Void
+    let showPinnedList: () -> Void
+    let move: (Int) -> Void
 
     @Environment(\.appTheme) private var theme
+    @State private var ignoresNextTap = false
 
     var body: some View {
-        Button(action: action) {
+        HStack(spacing: 10) {
+            if total > 1 {
+                Button("Tópico anterior", systemImage: "chevron.left") {
+                    move(-1)
+                }
+                .labelStyle(.iconOnly)
+                .buttonStyle(.plain)
+                .foregroundStyle(theme.accentColor)
+            }
+
             HStack(spacing: 12) {
-                Image(systemName: "star.fill")
+                Image(systemName: "pin.fill")
                     .foregroundStyle(theme.accentColor)
 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Favorito")
+                    Text("Tópico fixado \(position) de \(total)")
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(.secondary)
                     Text(activity.title)
@@ -323,12 +419,103 @@ private struct FavoriteActivityBanner: View {
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 10)
-            .background(theme.accentColor.opacity(0.10), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
             .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .onTapGesture {
+                guard !ignoresNextTap else { return }
+                navigate()
+            }
+            .onLongPressGesture(minimumDuration: 0.6) {
+                ignoresNextTap = true
+                showPinnedList()
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    ignoresNextTap = false
+                }
+            }
+            .gesture(
+                DragGesture(minimumDistance: 20)
+                    .onEnded { gesture in
+                        guard total > 1 else { return }
+                        move(gesture.translation.width < 0 ? 1 : -1)
+                    }
+            )
+
+            if total > 1 {
+                Button("Próximo tópico", systemImage: "chevron.right") {
+                    move(1)
+                }
+                .labelStyle(.iconOnly)
+                .buttonStyle(.plain)
+                .foregroundStyle(theme.accentColor)
+            }
         }
-        .buttonStyle(.plain)
-        .accessibilityLabel("Favorito: \(activity.title)")
-        .accessibilityHint("Vai para esta atividade na linha do tempo")
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
+        .background(theme.accentColor.opacity(0.10), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .accessibilityElement(children: .contain)
+    }
+}
+
+private struct PinnedActivitiesSheet: View {
+    let activities: [TeamActivity]
+    let onSelect: (TeamActivity.ID) -> Void
+    let onUnpin: (TeamActivity.ID) -> Void
+
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                Text("Tópicos fixados")
+                    .font(.title2.weight(.semibold))
+                Spacer()
+                Button("Fechar", systemImage: "xmark", action: { dismiss() })
+                    .labelStyle(.iconOnly)
+                    .buttonStyle(.plain)
+                    .foregroundStyle(.secondary)
+            }
+
+            if activities.isEmpty {
+                ContentUnavailableView("Nenhum tópico fixado", systemImage: "pin.slash")
+            } else {
+                List {
+                    ForEach(Array(activities.enumerated()), id: \.element.id) { index, activity in
+                        HStack(spacing: 12) {
+                            Text("\(index + 1)")
+                                .font(.caption.weight(.bold))
+                                .foregroundStyle(.secondary)
+                                .frame(width: 18)
+
+                            Button {
+                                onSelect(activity.id)
+                            } label: {
+                                VStack(alignment: .leading, spacing: 3) {
+                                    Label(activity.category.rawValue, systemImage: activity.category.systemImage)
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                    Text(activity.title)
+                                        .font(.subheadline.weight(.semibold))
+                                        .lineLimit(1)
+                                }
+                            }
+                            .buttonStyle(.plain)
+
+                            Spacer()
+
+                            Button("Desfixar", systemImage: "pin.slash", role: .destructive) {
+                                onUnpin(activity.id)
+                            }
+                            .labelStyle(.iconOnly)
+                            .buttonStyle(.borderless)
+                            .accessibilityLabel("Desfixar \(activity.title)")
+                        }
+                        .padding(.vertical, 4)
+                    }
+                }
+                .listStyle(.inset)
+            }
+        }
+        .padding(24)
+        .frame(width: 460, height: 360)
     }
 }
 
@@ -500,4 +687,3 @@ private struct ProfileAvatar: View {
             .frame(width: size, height: size)
     }
 }
-
