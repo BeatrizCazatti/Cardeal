@@ -22,6 +22,12 @@ struct BoardColumn: Identifiable, Hashable {
         )
     }
 
+    func filtered(by category: DashboardItemCategory?, matching searchQuery: String) -> BoardColumn {
+        var filteredColumn = filtered(by: category)
+        filteredColumn.items = filteredColumn.items.filter { $0.matches(searchQuery: searchQuery) }
+        return filteredColumn
+    }
+
     @discardableResult
     mutating func markAsReviewed(itemID: BoardItem.ID) -> Bool {
         guard let index = items.firstIndex(where: { $0.id == itemID }),
@@ -90,6 +96,7 @@ struct BoardItem: Identifiable, Hashable {
     init(draft: BoardItemDraft, category: DashboardItemCategory) {
         self.init(
             title: draft.title,
+            badgeCount: 1,
             assignees: draft.assignees,
             dateText: draft.dateText.emptyAsNil,
             location: draft.location.emptyAsNil,
@@ -102,12 +109,28 @@ struct BoardItem: Identifiable, Hashable {
         badgeCount = nil
     }
 
+    var isAwaitingReview: Bool {
+        badgeCount != nil
+    }
+
     mutating func apply(_ draft: BoardItemDraft) {
         title = draft.title
         descriptionText = draft.description.emptyAsNil
         assignees = draft.assignees
         dateText = draft.dateText.emptyAsNil
         location = draft.location.emptyAsNil
+    }
+}
+
+extension BoardItem {
+    func matches(searchQuery: String) -> Bool {
+        let query = searchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !query.isEmpty else { return true }
+
+        let searchableText = [title, descriptionText ?? "", dateText ?? "", location ?? ""]
+            + assignees.map(\.name)
+
+        return searchableText.contains { $0.localizedCaseInsensitiveContains(query) }
     }
 }
 

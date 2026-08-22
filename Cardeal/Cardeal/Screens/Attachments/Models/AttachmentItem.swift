@@ -38,6 +38,31 @@ struct AttachmentItem: Identifiable, Hashable {
     }
 }
 
+extension AttachmentItem {
+    /// Pesquisa pelos metadados que ajudam a identificar um arquivo, inclusive
+    /// quando a busca começa na visualização de pastas.
+    func matches(searchQuery: String) -> Bool {
+        let query = searchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !query.isEmpty else { return true }
+
+        let searchableText = [
+            name,
+            owner,
+            location,
+            team,
+            type.rawValue,
+            folder.rawValue,
+            details.participants,
+            details.project,
+            details.source,
+            details.excerpt,
+            details.notes
+        ]
+
+        return searchableText.contains { $0.localizedCaseInsensitiveContains(query) }
+    }
+}
+
 /// Informações complementares mostradas ao abrir um arquivo.
 struct AttachmentDetails: Hashable {
     let participants: String

@@ -12,46 +12,118 @@ struct TeamDetailSheet: View {
     let team: TeamDetail
     @Environment(\.dismiss) private var dismiss
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.appTheme) private var theme
     @State private var selectedTab: Tab = .timeline
     @State private var selectedMember: TeamMember?
+    @State private var pinnedActivityIDs: [TeamActivity.ID] = []
+    @State private var displayedPinnedIndex = 0
+    @State private var pendingPinID: TeamActivity.ID?
+    @State private var isPinnedListPresented = false
+    @State private var timelineScrollTarget: TeamActivity.ID?
+
+    private var displayedPinnedActivity: TeamActivity? {
+        guard pinnedActivityIDs.indices.contains(displayedPinnedIndex) else { return nil }
+        let activityID = pinnedActivityIDs[displayedPinnedIndex]
+        return team.timeline.first { $0.id == activityID }
+    }
+
+    private var pendingPinActivity: TeamActivity? {
+        guard let pendingPinID else { return nil }
+        return team.timeline.first { $0.id == pendingPinID }
+    }
+
+    private var pinnedActivities: [TeamActivity] {
+        pinnedActivityIDs.compactMap { activityID in
+            team.timeline.first { $0.id == activityID }
+        }
+    }
 
     var body: some View {
         VStack(spacing: 0) {
-            HStack {
-                Text(team.name)
-                    .font(.largeTitle.weight(.semibold))
+            VStack(spacing: 0) {
+                HStack {
+                    Text(team.name)
+                        .font(.largeTitle.weight(.semibold))
 
-                Spacer()
+                    Spacer()
 
-                Button("Fechar", systemImage: "xmark", action: { dismiss() })
-                    .labelStyle(.iconOnly)
-                    .buttonStyle(.plain)
-                    .foregroundStyle(.secondary)
+                    Button("Fechar", systemImage: "xmark", action: { dismiss() })
+                        .labelStyle(.iconOnly)
+                        .buttonStyle(.plain)
+                        .foregroundStyle(.secondary)
+                }
+                .padding(.horizontal, 36)
+                .padding(.top, 32)
+                .padding(.bottom, 22)
+
+                HStack {
+                    tabSelector
+
+                    Spacer()
+                }
+                .padding(.horizontal, 36)
+                .padding(.bottom, 28)
             }
-            .padding(.horizontal, 36)
-            .padding(.top, 32)
-            .padding(.bottom, 22)
+            .background(TeamDetailHeaderBackground(theme: theme))
 
-            HStack {
-                tabSelector
-
-                Spacer()
+            if selectedTab == .timeline, let displayedPinnedActivity {
+                PinnedActivityBanner(
+                    activity: displayedPinnedActivity,
+                    position: displayedPinnedIndex + 1,
+                    total: pinnedActivityIDs.count,
+                    navigate: { navigateToActivity(displayedPinnedActivity.id) },
+                    showPinnedList: { isPinnedListPresented = true },
+                    move: movePinnedBanner
+                )
+                .padding(.horizontal, 36)
+                .padding(.vertical, 12)
             }
-            .padding(.horizontal, 36)
-            .padding(.bottom, 28)
 
             Divider()
 
             Group {
                 switch selectedTab {
                 case .timeline:
-                    TeamTimelineView(activities: team.timeline, members: team.members)
+                    TeamTimelineView(
+                        activities: team.timeline,
+                        members: team.members,
+                        pinnedActivityIDs: $pinnedActivityIDs,
+                        scrollTarget: $timelineScrollTarget
+                    ) { activityID in
+                        togglePin(activityID)
+                    }
                 case .people:
                     TeamPeopleView(members: team.members, selectedMember: $selectedMember)
                 }
             }
         }
         .frame(minWidth: 960, idealWidth: 1_160, minHeight: 620, idealHeight: 720)
+        .alert("Limite de tópicos fixados", isPresented: Binding(
+            get: { pendingPinID != nil },
+            set: { if !$0 { pendingPinID = nil } }
+        ), presenting: pendingPinActivity) { activity in
+            Button("Substituir o mais antigo") {
+                replaceOldestPin(with: activity.id)
+            }
+            Button("Cancelar", role: .cancel) {
+                pendingPinID = nil
+            }
+        } message: { activity in
+            Text("Você já tem 4 tópicos fixados. Deseja substituir o tópico fixado há mais tempo por “\(activity.title)”?" )
+        }
+        .sheet(isPresented: $isPinnedListPresented) {
+            PinnedActivitiesSheet(
+                activities: pinnedActivities,
+                onSelect: { activityID in
+                    if let index = pinnedActivityIDs.firstIndex(of: activityID) {
+                        displayedPinnedIndex = index
+                    }
+                    isPinnedListPresented = false
+                    navigateToActivity(activityID)
+                },
+                onUnpin: unpin
+            )
+        }
     }
 
     private var tabSelector: some View {
@@ -61,7 +133,7 @@ struct TeamDetailSheet: View {
                     select(tab)
                 } label: {
                     Text(tab.rawValue)
-                        .foregroundStyle(selectedTab == tab ? Color.tabButtonSelectedText : Color.tabButtonText)
+                        .foregroundStyle(selectedTab == tab ? Color.Token.textOnAccent : Color.Token.textNavigation)
                         .font(.title3.weight(selectedTab == tab ? .semibold : .regular))
                         .padding(.horizontal, 20)
                         .frame(minHeight: 44)
@@ -71,7 +143,7 @@ struct TeamDetailSheet: View {
                 .background {
                     if selectedTab == tab {
                         Capsule(style: .continuous)
-                            .fill(Color.primaryAction)
+                            .fill(theme.accentColor)
                     }
                 }
                 .accessibilityAddTraits(selectedTab == tab ? .isSelected : [])
@@ -95,36 +167,109 @@ struct TeamDetailSheet: View {
             }
         }
     }
+
+    private func togglePin(_ activityID: TeamActivity.ID) {
+        if pinnedActivityIDs.contains(activityID) {
+            unpin(activityID)
+        } else if pinnedActivityIDs.count < 4 {
+            pinnedActivityIDs.append(activityID)
+            displayedPinnedIndex = pinnedActivityIDs.count - 1
+        } else {
+            pendingPinID = activityID
+        }
+    }
+
+    private func replaceOldestPin(with activityID: TeamActivity.ID) {
+        guard !pinnedActivityIDs.isEmpty else { return }
+        pinnedActivityIDs.removeFirst()
+        pinnedActivityIDs.append(activityID)
+        displayedPinnedIndex = pinnedActivityIDs.count - 1
+        pendingPinID = nil
+    }
+
+    private func unpin(_ activityID: TeamActivity.ID) {
+        guard let index = pinnedActivityIDs.firstIndex(of: activityID) else { return }
+        pinnedActivityIDs.remove(at: index)
+
+        if pinnedActivityIDs.isEmpty {
+            displayedPinnedIndex = 0
+        } else if index < displayedPinnedIndex {
+            displayedPinnedIndex -= 1
+        } else if displayedPinnedIndex >= pinnedActivityIDs.count {
+            displayedPinnedIndex = pinnedActivityIDs.count - 1
+        }
+    }
+
+    private func movePinnedBanner(by offset: Int) {
+        guard pinnedActivityIDs.count > 1 else { return }
+        displayedPinnedIndex = (displayedPinnedIndex + offset + pinnedActivityIDs.count) % pinnedActivityIDs.count
+    }
+
+    private func navigateToActivity(_ activityID: TeamActivity.ID) {
+        if selectedTab != .timeline {
+            select(.timeline)
+        }
+
+        // Limpar antes de reaplicar permite repetir o atalho para o mesmo item.
+        timelineScrollTarget = nil
+        DispatchQueue.main.async {
+            timelineScrollTarget = activityID
+        }
+    }
 }
 
 private struct TeamTimelineView: View {
     let activities: [TeamActivity]
     let members: [TeamMember]
-    @State private var favoriteActivityIDs = Set<TeamActivity.ID>()
+    @Binding var pinnedActivityIDs: [TeamActivity.ID]
+    @Binding var scrollTarget: TeamActivity.ID?
+    let togglePin: (TeamActivity.ID) -> Void
+    @State private var highlightedActivityID: TeamActivity.ID?
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 0) {
-                ForEach(Array(activities.enumerated()), id: \.element.id) { index, activity in
-                    TeamTimelineRow(
-                        activity: activity,
-                        members: members,
-                        isFavorite: favoriteActivityIDs.contains(activity.id),
-                        showsConnector: index < activities.count - 1
-                    ) {
-                        toggleFavorite(activity)
+        ScrollViewReader { proxy in
+            ScrollView {
+                VStack(alignment: .leading, spacing: 0) {
+                    ForEach(Array(activities.enumerated()), id: \.element.id) { index, activity in
+                        TeamTimelineRow(
+                            activity: activity,
+                            members: members,
+                            isPinned: pinnedActivityIDs.contains(activity.id),
+                            isHighlighted: highlightedActivityID == activity.id,
+                            showsConnector: index < activities.count - 1
+                        ) {
+                            togglePin(activity.id)
+                        }
+                        .id(activity.id)
                     }
                 }
+                .padding(36)
             }
-            .padding(36)
+            .onAppear {
+                scroll(to: scrollTarget, using: proxy)
+            }
+            .onChange(of: scrollTarget) { _, newValue in
+                scroll(to: newValue, using: proxy)
+            }
         }
     }
 
-    private func toggleFavorite(_ activity: TeamActivity) {
-        if favoriteActivityIDs.contains(activity.id) {
-            favoriteActivityIDs.remove(activity.id)
-        } else {
-            favoriteActivityIDs.insert(activity.id)
+    private func scroll(to target: TeamActivity.ID?, using proxy: ScrollViewProxy) {
+        guard let target else { return }
+
+        DispatchQueue.main.async {
+            withAnimation(.snappy(duration: 0.4)) {
+                proxy.scrollTo(target, anchor: .center)
+                highlightedActivityID = target
+            }
+            scrollTarget = nil
+
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.8) {
+                guard highlightedActivityID == target else { return }
+                withAnimation(.easeOut(duration: 0.3)) {
+                    highlightedActivityID = nil
+                }
+            }
         }
     }
 }
@@ -132,27 +277,29 @@ private struct TeamTimelineView: View {
 private struct TeamTimelineRow: View {
     let activity: TeamActivity
     let members: [TeamMember]
-    let isFavorite: Bool
+    let isPinned: Bool
+    let isHighlighted: Bool
     let showsConnector: Bool
-    let toggleFavorite: () -> Void
+    let togglePin: () -> Void
+    @Environment(\.appTheme) private var theme
+    @State private var isHovering = false
 
     private var categoryColor: Color {
         switch activity.category {
-        case .decision: .green
-        case .task: .blue
-        case .meeting: .orange
+        case .decision: Color.Token.statusSuccess
+        case .task: Color.Token.interactiveAccent
+        case .meeting: Color.Token.statusWarning
         }
     }
 
     var body: some View {
-        HStack(alignment: .top, spacing: 24) {
-            VStack(alignment: .trailing, spacing: 10) {
-                Label(activity.date, systemImage: "calendar")
+        HStack(alignment: .center, spacing: 24) {
+            VStack(alignment: .leading, spacing: 10) {
+                Text(activity.date)
                     .font(.subheadline)
-                    .foregroundStyle(Color.primaryAction.opacity(0.72))
-                    .labelStyle(.titleAndIcon)
+                    .foregroundStyle(theme.accentColor.opacity(0.72))
             }
-            .frame(width: 180, alignment: .trailing)
+            .frame(width: 180, alignment: .center)
 
             VStack(spacing: 0) {
                 Circle()
@@ -166,7 +313,7 @@ private struct TeamTimelineRow: View {
             .frame(minHeight: 146, alignment: .top)
 
             VStack(alignment: .leading, spacing: 12) {
-                Label(activity.category.rawValue, systemImage: activity.category.systemImage)
+                Text(activity.category.rawValue)
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(categoryColor)
                 Text(activity.title)
@@ -185,26 +332,191 @@ private struct TeamTimelineRow: View {
                     }
                     .accessibilityHidden(true)
 
-                    Text(activity.participants.joined(separator: ", "))
-                        .font(.subheadline.weight(.medium))
-                        .foregroundStyle(.secondary)
+//                    Text(activity.participants.joined(separator: ", "))
+//                        .font(.subheadline.weight(.medium))
+//                        .foregroundStyle(.secondary)
                 }
             }
             .padding(.bottom, 28)
+            .padding(.top, 12)
+            .frame(maxWidth: .infinity, alignment: .leading)
 
-            Spacer(minLength: 12)
-
-            Button(action: toggleFavorite) {
-                Image(systemName: isFavorite ? "star.fill" : "star")
-                    .font(.title3.weight(.medium))
-                    .foregroundStyle(isFavorite ? .yellow : Color.primaryAction)
+            if isHovering || isPinned {
+                Button(action: togglePin) {
+                    Image(systemName: isPinned ? "pin.fill" : "pin")
+                        .font(.title3.weight(.medium))
+                        .foregroundStyle(isPinned ? theme.accentColor : .secondary)
+                        .frame(width: 36, height: 36)
+                        .contentShape(Circle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(isPinned ? "Desfixar tópico" : "Fixar tópico")
+                .accessibilityValue(isPinned ? "Fixado" : "Não fixado")
+                .transition(.opacity.combined(with: .scale(scale: 0.9)))
+            } else {
+                Color.clear
                     .frame(width: 36, height: 36)
-                    .contentShape(Circle())
             }
-            .buttonStyle(.plain)
-            .accessibilityLabel(isFavorite ? "Remover dos favoritos" : "Adicionar aos favoritos")
-            .accessibilityValue(isFavorite ? "Favorito" : "Não favorito")
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 12)
+        .background {
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill((isHighlighted || isHovering) ? theme.accentColor.opacity(isHighlighted ? 0.12 : 0.07) : .clear)
+        }
+        .overlay {
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke((isHighlighted || isHovering) ? theme.accentColor.opacity(isHighlighted ? 0.45 : 0.24) : .clear, lineWidth: 1)
+        }
+        .onHover { hovering in
+            withAnimation(.easeInOut(duration: 0.16)) {
+                isHovering = hovering
+            }
+        }
+        .animation(.easeInOut(duration: 0.2), value: isHighlighted)
+    }
+}
+
+private struct PinnedActivityBanner: View {
+    let activity: TeamActivity
+    let position: Int
+    let total: Int
+    let navigate: () -> Void
+    let showPinnedList: () -> Void
+    let move: (Int) -> Void
+
+    @Environment(\.appTheme) private var theme
+    @State private var ignoresNextTap = false
+
+    var body: some View {
+        HStack(spacing: 10) {
+            if total > 1 {
+                Button("Tópico anterior", systemImage: "chevron.left") {
+                    move(-1)
+                }
+                .labelStyle(.iconOnly)
+                .buttonStyle(.plain)
+                .foregroundStyle(theme.accentColor)
+            }
+
+            HStack(spacing: 12) {
+                Image(systemName: "pin.fill")
+                    .foregroundStyle(theme.accentColor)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Tópico fixado \(position) de \(total)")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                    Text(activity.title)
+                        .font(.subheadline.weight(.semibold))
+                        .lineLimit(1)
+                }
+
+                Spacer(minLength: 12)
+
+                Image(systemName: "arrow.down")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(theme.accentColor)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+            .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .onTapGesture {
+                guard !ignoresNextTap else { return }
+                navigate()
+            }
+            .onLongPressGesture(minimumDuration: 0.6) {
+                ignoresNextTap = true
+                showPinnedList()
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    ignoresNextTap = false
+                }
+            }
+            .gesture(
+                DragGesture(minimumDistance: 20)
+                    .onEnded { gesture in
+                        guard total > 1 else { return }
+                        move(gesture.translation.width < 0 ? 1 : -1)
+                    }
+            )
+
+            if total > 1 {
+                Button("Próximo tópico", systemImage: "chevron.right") {
+                    move(1)
+                }
+                .labelStyle(.iconOnly)
+                .buttonStyle(.plain)
+                .foregroundStyle(theme.accentColor)
+            }
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
+        .background(theme.accentColor.opacity(0.10), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .accessibilityElement(children: .contain)
+    }
+}
+
+private struct PinnedActivitiesSheet: View {
+    let activities: [TeamActivity]
+    let onSelect: (TeamActivity.ID) -> Void
+    let onUnpin: (TeamActivity.ID) -> Void
+
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                Text("Tópicos fixados")
+                    .font(.title2.weight(.semibold))
+                Spacer()
+                Button("Fechar", systemImage: "xmark", action: { dismiss() })
+                    .labelStyle(.iconOnly)
+                    .buttonStyle(.plain)
+                    .foregroundStyle(.secondary)
+            }
+
+            if activities.isEmpty {
+                ContentUnavailableView("Nenhum tópico fixado", systemImage: "pin.slash")
+            } else {
+                List {
+                    ForEach(Array(activities.enumerated()), id: \.element.id) { index, activity in
+                        HStack(spacing: 12) {
+                            Text("\(index + 1)")
+                                .font(.caption.weight(.bold))
+                                .foregroundStyle(.secondary)
+                                .frame(width: 18)
+
+                            Button {
+                                onSelect(activity.id)
+                            } label: {
+                                VStack(alignment: .leading, spacing: 3) {
+                                    Label(activity.category.rawValue, systemImage: activity.category.systemImage)
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                    Text(activity.title)
+                                        .font(.subheadline.weight(.semibold))
+                                        .lineLimit(1)
+                                }
+                            }
+                            .buttonStyle(.plain)
+
+                            Spacer()
+
+                            Button("Desfixar", systemImage: "pin.slash", role: .destructive) {
+                                onUnpin(activity.id)
+                            }
+                            .labelStyle(.iconOnly)
+                            .buttonStyle(.borderless)
+                            .accessibilityLabel("Desfixar \(activity.title)")
+                        }
+                        .padding(.vertical, 4)
+                    }
+                }
+                .listStyle(.inset)
+            }
+        }
+        .padding(24)
+        .frame(width: 460, height: 360)
     }
 }
 
@@ -225,6 +537,13 @@ private struct TeamPeopleView: View {
                 .padding(36)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .contentShape(Rectangle())
+            .gesture(
+                TapGesture().onEnded {
+                    selectedMember = nil
+                },
+                including: .gesture
+            )
 
             if let selectedMember {
                 Divider()
@@ -358,20 +677,20 @@ private struct ProfileAvatar: View {
 
     private var color: Color {
         switch name.unicodeScalars.first?.value ?? 0 {
-        case 65...70: .cardealPurple
-        case 71...76: .cardealGreen
-        case 77...82: .cardealOrange
-        default: .cardealBlue
+        case 65...70: Color.Token.themeStandardAccent
+        case 71...76: Color.Token.statusSuccess
+        case 77...82: Color.Token.statusWarning
+        default: Color.Token.interactiveAccent
         }
     }
 
     var body: some View {
         Circle()
-            .fill(highlighted ? Color.primaryAction : color.opacity(0.20))
+            .fill(highlighted ? Color.Token.interactiveAccent : color.opacity(0.20))
             .overlay {
                 Text(initials)
                     .font(size >= 60 ? .title3.weight(.semibold) : .caption.weight(.semibold))
-                    .foregroundStyle(highlighted ? .white : color)
+                    .foregroundStyle(highlighted ? Color.Token.textOnAccent : color)
             }
             .frame(width: size, height: size)
     }
