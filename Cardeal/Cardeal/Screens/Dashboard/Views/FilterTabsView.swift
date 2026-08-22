@@ -2,102 +2,74 @@ import SwiftUI
 
 // MARK: - Abas de filtro
 
-/// Uma barra de abas horizontal com seleção em Liquid Glass e badges de itens
-/// pendentes. O conteúdo continua legível e cada aba mantém uma área de toque
-/// independente, mesmo quando a barra precisa rolar horizontalmente.
+/// Barra de filtros baseada no `ClearSegmentedPicker`: seus segmentos têm
+/// largura natural, indicador de vidro, toque, arrasto e snap com spring.
 struct FilterTabsView: View {
     @ObservedObject var badgeStore: DashboardBadgeStore
     @Binding var selection: FilterTab
-
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var tabs: [FilterTab] { badgeStore.tabs }
 
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
-            GlassEffectContainerCompat(spacing: 8) {
-                HStack(spacing: 8) {
-                    ForEach(tabs) { tab in
-                        FilterTabButton(
-                            tab: tab,
-                            isSelected: tab == selection,
-                            action: { select(tab) }
-                        )
-                    }
-                }
-                .padding(.horizontal, 4)
-                .padding(.bottom, 4)
-            }
+            ClearSegmentedPicker(
+                tabs: tabs.map(\.title),
+                icons: tabs.map(\.destination.systemImage),
+                colors: tabs.map { color(for: $0.destination) },
+                badges: tabs.map(\.count),
+                selectedTextColor: Color.Token.textPrimary,
+                unselectedTextColor: Color.Token.textNavigation,
+                currentTab: selectedIndex
+            )
+            // O picker mantém a largura do conteúdo; o ScrollView passa a
+            // rolar em vez de comprimir/truncar os segmentos na toolbar.
+            .fixedSize(horizontal: true, vertical: false)
+            // Os badges avançam 9pt além do segmento. Esta área segura evita
+            // que o clipping natural do ScrollView corte seu topo e direita.
+            .padding(.top, 12)
+            .padding(.trailing, 24)
+            .padding(.leading, 4)
+            .padding(.bottom, 4)
         }
+        .frame(minHeight: 58, alignment: .bottomLeading)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .layoutPriority(1)
         .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Filtros do dashboard")
     }
 
-    private func select(_ tab: FilterTab) {
-        guard tab != selection else { return }
-
-        if reduceMotion {
-            selection = tab
-        } else {
-            withAnimation(.snappy(duration: 0.25)) {
-                selection = tab
+    private var selectedIndex: Binding<Int> {
+        Binding(
+            get: {
+                tabs.firstIndex { $0.destination == selection.destination } ?? 0
+            },
+            set: { index in
+                guard tabs.indices.contains(index) else { return }
+                selection = tabs[index]
             }
+        )
+    }
+
+    private func color(for destination: DashboardTabDestination) -> Color {
+        switch destination {
+        case .active: Color.Token.interactiveAccent
+        case .archived: Color.Token.themeOceanAccent
+        case .deleted: Color.Token.statusAttention
         }
     }
 }
 
-private struct FilterTabButton: View {
-    let tab: FilterTab
-    let isSelected: Bool
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            Text(tab.title)
-                .foregroundStyle(isSelected ? Color.Token.textOnAccent : Color.Token.textNavigation)
-                .font(.title3.weight(isSelected ? .semibold : .regular))
-                .lineLimit(1)
-                .padding(.horizontal, 20)
-                .frame(minHeight: 44)
-                .contentShape(.capsule)
+private extension DashboardTabDestination {
+    var systemImage: String {
+        switch self {
+        case .active(nil): "square.grid.2x2"
+        case .active(.meeting): "person.2"
+        case .active(.task): "checkmark.circle"
+        case .active(.change): "arrow.triangle.2.circlepath"
+        case .active(.decision): "arrow.triangle.branch"
+        case .archived: "archivebox"
+        case .deleted: "trash"
         }
-        .buttonStyle(.plain)
-        .background {
-            if isSelected {
-                Capsule(style: .continuous)
-                    .fill(Color.Token.interactiveAccent)
-            }
-        }
-        .overlay(alignment: .topTrailing) {
-            if tab.count > 0 {
-                CountBadge(count: tab.count, diameter: 25)
-                    .id(tab.count)
-                    .offset(x: 10, y: -10)
-                    .allowsHitTesting(false)
-            }
-        }
-        .padding(.top, 16)
-        .accessibilityLabel(tab.title)
-        .accessibilityValue(tab.count > 0 ? "\(tab.count) itens pendentes" : "Nenhum item pendente")
-        .accessibilityAddTraits(isSelected ? .isSelected : [])
-    }
-}
-
-/// Badge circular reutilizável para sinalizar a quantidade de itens pendentes.
-/// O valor vem do estado do dashboard; ao mudá-lo, o SwiftUI atualiza a badge
-/// junto com a aba correspondente.
-struct CountBadge: View {
-    let count: Int
-    var diameter: CGFloat = 20
-
-    var body: some View {
-        Text("\(count)")
-            .font(diameter >= 30 ? .subheadline.weight(.bold) : .caption2.weight(.bold))
-            .monospacedDigit()
-            .foregroundStyle(Color.Token.textOnAccent)
-            .frame(width: diameter, height: diameter)
-            .background(Circle().fill(Color.Token.statusNotification.gradient))
-            .accessibilityLabel("\(count) itens pendentes")
     }
 }

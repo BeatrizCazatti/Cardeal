@@ -213,4 +213,14 @@ enum MockData {
         TeamActivity(category: .task, title: "Novo sistema de ticket a ser implementado", detail: "Os responsáveis confirmaram ciência e iniciarão a mudança em breve.", date: "29 de julho, 2026", participants: ["Leonardo Drummond", "Eduarda Vieira"]),
         TeamActivity(category: .meeting, title: "Alinhamento da implementação", detail: "Foram definidos os próximos passos e a comunicação com as equipes.", date: "29 de julho, 2026", participants: ["Leonardo Drummond", "Eduarda Vieira"])
     ]
+    
+    enum Tabs: String {
+        case geral = "Geral"
+        case reunioes = "Reuniões"
+        case tarefas = "Tarefas"
+        case mudancas = "Mudanças"
+        // case decisoes = "Decisões"
+        // case arquivados = "Arquivados"
+        // case excluidos = "Excluídos"
+    }
 }

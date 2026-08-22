@@ -10,6 +10,7 @@ struct CardealApp: App {
 
     var body: some Scene {
         WindowGroup {
+            //TestView()
             DashboardView()
                 .environment(\.appTheme, theme)
                 .tint(theme.accentColor)
