@@ -14,7 +14,6 @@ struct FilterTabsView: View {
         ScrollView(.horizontal, showsIndicators: false) {
             ClearSegmentedPicker(
                 tabs: tabs.map(\.title),
-                icons: tabs.map(\.destination.systemImage),
                 colors: tabs.map { color(for: $0.destination) },
                 badges: tabs.map(\.count),
                 selectedTextColor: Color.Token.textPrimary,
