@@ -227,6 +227,24 @@ private struct SidebarDetailView: View {
                 restoreDeletedItem: restoreDeletedItem,
                 createItem: createItem
             )
+        case .archived:
+            StoredItemsDetailView(
+                title: "Arquivados",
+                items: archivedItems,
+                actionTitle: "Desarquivar",
+                actionSystemImage: "tray.and.arrow.up",
+                searchText: $searchText,
+                action: unarchiveItem
+            )
+        case .deleted:
+            StoredItemsDetailView(
+                title: "Excluídos",
+                items: deletedItems,
+                actionTitle: "Restaurar",
+                actionSystemImage: "arrow.uturn.backward",
+                searchText: $searchText,
+                action: restoreDeletedItem
+            )
         case .attachments:
             AttachmentsView()
         case nil:
@@ -235,6 +253,40 @@ private struct SidebarDetailView: View {
                 systemImage: "sidebar.left"
             )
         }
+    }
+}
+
+private struct StoredItemsDetailView: View {
+    let title: String
+    let items: [StoredBoardItem]
+    let actionTitle: String
+    let actionSystemImage: String
+    @Binding var searchText: String
+    let action: (StoredBoardItem) -> Void
+
+    private var visibleItems: [StoredBoardItem] {
+        items.filter { $0.item.matches(searchQuery: searchText) }
+    }
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 24) {
+                Text(title)
+                    .font(.largeTitle.weight(.regular))
+                    .foregroundStyle(Color.Token.textBrand)
+
+                StoredItemsBoardView(
+                    items: visibleItems,
+                    title: title,
+                    actionTitle: actionTitle,
+                    actionSystemImage: actionSystemImage,
+                    action: action
+                )
+            }
+            .padding(24)
+        }
+        .background(Color.Token.backgroundPrimary)
+        .searchable(text: $searchText, placement: .toolbar, prompt: "Buscar cards")
     }
 }
 
@@ -255,35 +307,78 @@ struct DashboardContentView: View {
     let unarchiveItem: (StoredBoardItem) -> Void
     let restoreDeletedItem: (StoredBoardItem) -> Void
     let createItem: (BoardItemDraft, String, DashboardItemCategory) -> Void
+    @Environment(\.appTheme) private var theme
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 24) {
-                GreetingHeaderView(name: "Fabíola")
+        GeometryReader { proxy in
+            ZStack {
+                ThemeGradientBackground(theme: theme)
 
-                WeekNavigatorView(selection: $selectedWeek)
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 24) {
+                        HStack(alignment: .center) {
+                            GreetingHeaderView(name: "Fabíola")
+                            Spacer()
+                            WeekNavigatorView(selection: $selectedWeek)
+                        }
 
-                HStack(alignment: .center, spacing: 16) {
-                    FilterTabsView(badgeStore: badgeStore, selection: $selectedTab)
-                    Spacer()
-                    ToolbarActionsView(teamNames: columns.map(\.title), createItem: createItem)
+                        HStack(alignment: .center, spacing: 16) {
+                            FilterTabsView(badgeStore: badgeStore, selection: $selectedTab)
+
+                            DashboardToolbarPrimaryButton(title: "Novo item", systemImage: "plus") {
+                                isNewItemPresented = true
+                            }
+
+                            Spacer(minLength: 16)
+
+                            DashboardRefreshStatusView()
+                        }
+
+                        dashboardBoard
+
+                        FooterView(lastUpdated: "29 de julho, 14:30h")
+                            .padding(.top, 8)
+                    }
+                    .padding(24)
+                    .frame(
+                        maxWidth: .infinity,
+                        minHeight: max(0, proxy.size.height - 20),
+                        alignment: .topLeading
+                    )
+                    .background {
+                        UnevenRoundedRectangle(
+                            topLeadingRadius: 20,
+                            bottomLeadingRadius: 0,
+                            bottomTrailingRadius: 0,
+                            topTrailingRadius: 20,
+                            style: .continuous
+                        )
+                        .fill(Color.Token.backgroundPrimary)
+                    }
+                    .padding(.top, 20)
+                    .padding(.horizontal, 20)
                 }
-
-                dashboardBoard
-
-                FooterView(lastUpdated: "29 de julho, 14:30h")
-                    .padding(.top, 8)
             }
-            .padding(24)
         }
-        .background(Color.Token.backgroundPrimary)
         .searchable(
             text: $searchText,
             placement: .toolbar,
             prompt: "Buscar cards, pessoas e locais"
         )
         .navigationTitle("")
+        .toolbar {
+            ToolbarItemGroup(placement: .primaryAction) {
+                DashboardToolbarControls(teamNames: columns.map(\.title))
+            }
+        }
+        .sheet(isPresented: $isNewItemPresented) {
+            NewBoardItemSheet(teamNames: columns.map(\.title)) { draft, team, category in
+                createItem(draft, team, category)
+            }
+        }
     }
+
+    @State private var isNewItemPresented = false
 
     @ViewBuilder
     private var dashboardBoard: some View {
@@ -386,23 +481,21 @@ struct WeekNavigatorView: View {
 }
 
 
-// MARK: - Botões de ação da toolbar (filtro, ordenar, atualizar, novo item)
+// MARK: - Controles do dashboard
 
-struct ToolbarActionsView: View {
+private struct DashboardToolbarControls: View {
     let teamNames: [String]
-    let createItem: (BoardItemDraft, String, DashboardItemCategory) -> Void
 
     @State private var isSortPopoverPresented = false
     @State private var isFilterPopoverPresented = false
-    @State private var isNewItemPresented = false
     @State private var sortOption: SortOption = .oldest
     @State private var selectedPeople: Set<String> = ["Leonardo Drummond", "Eduarda Vieira"]
     @State private var selectedSubjects: Set<String> = ["Pagamentos", "Entregas"]
     @State private var selectedTeams: Set<String> = ["Atendimento"]
 
     var body: some View {
-        HStack(spacing: 16) {
-            ToolbarIconButton(systemImage: "line.3.horizontal.decrease", accessibilityLabel: "Filtrar") {
+        HStack(spacing: 0) {
+            DashboardToolbarIconButton(systemImage: "line.3.horizontal.decrease", accessibilityLabel: "Filtrar") {
                 isFilterPopoverPresented.toggle()
                 isSortPopoverPresented = false
             }
@@ -419,7 +512,10 @@ struct ToolbarActionsView: View {
                 )
             }
 
-            ToolbarIconButton(systemImage: "arrow.up.arrow.down", accessibilityLabel: "Ordenar") {
+            Divider()
+                .frame(height: 18)
+
+            DashboardToolbarIconButton(systemImage: "arrow.up.arrow.down", accessibilityLabel: "Ordenar") {
                 isSortPopoverPresented.toggle()
                 isFilterPopoverPresented = false
             }
@@ -430,19 +526,51 @@ struct ToolbarActionsView: View {
             ) {
                 SortPopover(selection: $sortOption)
             }
+        }
+        .padding(3)
+        .background(.ultraThinMaterial, in: Capsule(style: .continuous))
+        .overlay {
+            Capsule(style: .continuous)
+                .strokeBorder(Color.Token.borderSubtle.opacity(0.75), lineWidth: 1)
+        }
+        .shadow(color: .black.opacity(0.06), radius: 5, y: 2)
+    }
+}
 
-            DashboardToolbarPrimaryButton(title: "Atualizar", systemImage: "arrow.clockwise") {
+private struct DashboardToolbarIconButton: View {
+    let systemImage: String
+    let accessibilityLabel: String
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: systemImage)
+                .font(.subheadline.weight(.medium))
+                .foregroundStyle(Color.Token.textSecondary)
+                .frame(width: 30, height: 30)
+                .contentShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(accessibilityLabel)
+    }
+}
+
+private struct DashboardRefreshStatusView: View {
+    var body: some View {
+        VStack(alignment: .trailing, spacing: 4) {
+            Button("Atualizar", systemImage: "arrow.clockwise") {
                 // Ação: atualizar
             }
-            DashboardToolbarPrimaryButton(title: "Novo Item", systemImage: "plus") {
-                isNewItemPresented = true
-            }
+            .labelStyle(.titleOnly)
+            .font(.caption.weight(.semibold))
+            .buttonStyle(.plain)
+            .foregroundStyle(Color.Token.interactiveAccent)
+
+            Text("Última atualização em 29 de julho, 14:30h")
+                .font(.caption2)
+                .foregroundStyle(Color.Token.textSecondary)
         }
-        .sheet(isPresented: $isNewItemPresented) {
-            NewBoardItemSheet(teamNames: teamNames) { draft, team, category in
-                createItem(draft, team, category)
-            }
-        }
+        .frame(minWidth: 205, alignment: .trailing)
     }
 }
 
@@ -589,7 +717,6 @@ struct BoardView: View {
             .padding(.horizontal)
             .padding(.bottom)
         }
-        .scrollClipDisabled()
         .sheet(item: $selectedTeam) { team in
             TeamDetailSheet(team: team)
         }
@@ -642,7 +769,6 @@ private struct StoredItemsBoardView: View {
                 .padding(.horizontal)
                 .padding(.bottom)
             }
-            .scrollClipDisabled()
         }
     }
 
@@ -910,18 +1036,19 @@ private struct UnreadCardActionsView: View {
 
 private struct BoardItemCardAppearanceModifier: ViewModifier {
     let isAwaitingReview: Bool
+    @Environment(\.appTheme) private var theme
 
     func body(content: Content) -> some View {
         if isAwaitingReview {
             content
                 .background(
                     RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .fill(Color.Token.surfaceAttention)
+                        .fill(theme.newCardFillColor)
                 )
                 .overlay(
                     RoundedRectangle(cornerRadius: 14, style: .continuous)
                         .stroke(
-                            Color.Token.statusWarning,
+                            theme.newCardStrokeColor,
                             style: StrokeStyle(lineWidth: 2, dash: [10, 8])
                         )
                 )

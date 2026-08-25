@@ -14,9 +14,7 @@ enum MockData {
         FilterTab(title: "Reuniões", count: 1, destination: .active(.meeting)),
         FilterTab(title: "Tarefas", count: 1, destination: .active(.task)),
         FilterTab(title: "Mudanças", count: 0, destination: .active(.change)),
-        FilterTab(title: "Decisões", count: 1, destination: .active(.decision)),
-        FilterTab(title: "Arquivados", count: 0, destination: .archived),
-        FilterTab(title: "Excluídos", count: 0, destination: .deleted)
+        FilterTab(title: "Decisões", count: 1, destination: .active(.decision))
     ]
 
     static let attachments: [AttachmentItem] = [

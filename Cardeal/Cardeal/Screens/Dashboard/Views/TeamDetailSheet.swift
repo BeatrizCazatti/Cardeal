@@ -64,7 +64,7 @@ struct TeamDetailSheet: View {
                 .padding(.horizontal, 36)
                 .padding(.bottom, 28)
             }
-            .background(TeamDetailHeaderBackground(theme: theme))
+            .background(ThemeGradientBackground(theme: theme))
 
             if selectedTab == .timeline, let displayedPinnedActivity {
                 PinnedActivityBanner(
