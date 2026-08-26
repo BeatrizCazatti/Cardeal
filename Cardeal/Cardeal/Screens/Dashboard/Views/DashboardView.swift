@@ -909,7 +909,7 @@ private struct DashboardRefreshStatusView: View {
                 .font(.caption2)
                 .foregroundStyle(Color.Token.textSecondary)
         }
-        .frame(minWidth: 205, alignment: .trailing)
+        .frame(minWidth: 235, alignment: .trailing)
     }
 }
 
@@ -1337,8 +1337,8 @@ struct BoardItemCardView: View {
             }
         }
         .padding(16)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .frame(height: 180, alignment: .topLeading)
+        .frame(maxWidth: .infinity, alignment: .topLeading)
+        .fixedSize(horizontal: false, vertical: true)
         .modifier(BoardItemCardAppearanceModifier(isAwaitingReview: item.isAwaitingReview))
         .onHover { hovering in
             withAnimation(.easeInOut(duration: 0.15)) { isHovering = hovering }

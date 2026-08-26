@@ -1,8 +1,8 @@
 import SwiftUI
 
-// MARK: - Container principal
+// MARK: - Janela de Configurações (independente, não-modal)
 
-struct SettingsModalView: View {
+struct SettingsWindow: View {
     @StateObject private var model = SettingsViewModel()
     @State private var selectedTab: SettingsTab = .general
 

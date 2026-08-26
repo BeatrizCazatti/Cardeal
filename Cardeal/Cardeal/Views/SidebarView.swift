@@ -7,29 +7,26 @@ import SwiftUI
 /// que já oferece o botão nativo de recolher/expandir na toolbar.
 struct SidebarView: View {
     @Binding var selection: SidebarDestination?
-    @State private var isSettingsPresented = false
+    @Environment(\.openWindow) private var openWindow
+    @State private var isHistoryExpanded: Bool = true
 
     var body: some View {
         List(selection: $selection) {
-            Button {
-                isSettingsPresented = true
+            // Dashboard com disclosure agrupando Arquivados e Excluídos
+            DisclosureGroup(isExpanded: $isHistoryExpanded) {
+                NavigationLink(value: SidebarDestination.archived) {
+                    Label("Arquivados", systemImage: "archivebox")
+                }
+                .padding(.leading, 8)
+
+                NavigationLink(value: SidebarDestination.deleted) {
+                    Label("Excluídos", systemImage: "trash")
+                }
+                .padding(.leading, 8)
             } label: {
-                Label("Configurações", systemImage: "gearshape")
-            }
-            .buttonStyle(.plain)
-
-            NavigationLink(value: SidebarDestination.dashboard) {
-                Label("Dashboard", systemImage: "house")
-            }
-
-            NavigationLink(value: SidebarDestination.archived) {
-                Label("Arquivados", systemImage: "archivebox")
-                    .padding(.leading, 20)
-            }
-
-            NavigationLink(value: SidebarDestination.deleted) {
-                Label("Excluídos", systemImage: "trash")
-                    .padding(.leading, 20)
+                NavigationLink(value: SidebarDestination.dashboard) {
+                    Label("Dashboard", systemImage: "house")
+                }
             }
 
             NavigationLink(value: SidebarDestination.attachments) {
@@ -38,8 +35,18 @@ struct SidebarView: View {
         }
         .listStyle(.sidebar)
         .navigationTitle("Painel")
-        .sheet(isPresented: $isSettingsPresented) {
-            SettingsModalView()
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Button {
+                    openWindow(id: "settings")
+                } label: {
+                    Image(systemName: "gearshape")
+                        .imageScale(.medium)
+                }
+                .buttonStyle(.plain)
+                .help("Configurações")
+                .accessibilityLabel("Configurações")
+            }
         }
     }
 }

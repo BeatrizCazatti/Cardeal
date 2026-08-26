@@ -22,7 +22,7 @@ struct CardealApp: App {
         }
 
         Window("Configurações", id: "settings") {
-            SettingsModalView()
+            SettingsWindow()
                 .environment(\.appTheme, theme)
                 .tint(theme.accentColor)
                 .preferredColorScheme(appearance.colorScheme)
