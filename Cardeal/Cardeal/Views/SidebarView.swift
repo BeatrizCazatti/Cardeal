@@ -7,12 +7,12 @@ import SwiftUI
 /// que já oferece o botão nativo de recolher/expandir na toolbar.
 struct SidebarView: View {
     @Binding var selection: SidebarDestination?
-    @State private var isSettingsPresented = false
+    @Environment(\.openWindow) private var openWindow
 
     var body: some View {
         List(selection: $selection) {
             Button {
-                isSettingsPresented = true
+                openWindow(id: "settings")
             } label: {
                 Label("Configurações", systemImage: "gearshape")
             }
@@ -38,8 +38,5 @@ struct SidebarView: View {
         }
         .listStyle(.sidebar)
         .navigationTitle("Painel")
-        .sheet(isPresented: $isSettingsPresented) {
-            SettingsModalView()
-        }
     }
 }
