@@ -101,7 +101,7 @@ private extension WeekRangePicker {
     }
 
     var monthTitle: String {
-        displayedMonth.formatted(.dateTime.locale(Locale(identifier: "pt_BR")).month(.wide).year()).capitalized
+        displayedMonth.formatted(.dateTime.locale(Locale(identifier: "pt_BR")).month(.wide).year())
     }
 
     var weekdaySymbols: [String] {

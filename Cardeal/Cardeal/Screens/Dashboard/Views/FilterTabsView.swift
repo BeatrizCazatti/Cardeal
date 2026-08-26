@@ -11,32 +11,56 @@ struct FilterTabsView: View {
     private var tabs: [FilterTab] { badgeStore.tabs }
 
     var body: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            ClearSegmentedPicker(
-                tabs: tabs.map(\.title),
-                icons: tabs.map(\.destination.systemImage),
-                colors: tabs.map { color(for: $0.destination) },
-                badges: tabs.map(\.count),
-                selectedTextColor: Color.Token.textPrimary,
-                unselectedTextColor: Color.Token.textNavigation,
-                currentTab: selectedIndex
-            )
-            // O picker mantém a largura do conteúdo; o ScrollView passa a
-            // rolar em vez de comprimir/truncar os segmentos na toolbar.
-            .fixedSize(horizontal: true, vertical: false)
-            // Os badges avançam 9pt além do segmento. Esta área segura evita
-            // que o clipping natural do ScrollView corte seu topo e direita.
-            .padding(.top, 12)
-            .padding(.trailing, 24)
-            .padding(.leading, 4)
-            .padding(.bottom, 4)
+        ViewThatFits(in: .horizontal) {
+            tabTrack
+                .fixedSize(horizontal: true, vertical: false)
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                tabTrack
+                    .fixedSize(horizontal: true, vertical: false)
+            }
+            .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
+            .mask {
+                LinearGradient(
+                    stops: [
+                        .init(color: .white, location: 0),
+                        .init(color: .white, location: 0.84),
+                        .init(color: .clear, location: 1)
+                    ],
+                    startPoint: .leading,
+                    endPoint: .trailing
+                )
+            }
         }
         .frame(minHeight: 58, alignment: .bottomLeading)
+        // A área de layout pode crescer para acomodar a responsividade, mas a
+        // cápsula branca continua limitada à largura natural das tabs.
         .frame(maxWidth: .infinity, alignment: .leading)
         .layoutPriority(1)
-        .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Filtros do dashboard")
+    }
+
+    private var tabTrack: some View {
+        ClearSegmentedPicker(
+            tabs: tabs.map(\.title),
+            colors: tabs.map { color(for: $0.destination) },
+            badges: tabs.map(\.count),
+            selectedTextColor: Color.Token.textPrimary,
+            unselectedTextColor: Color.Token.textNavigation,
+            currentTab: selectedIndex
+        )
+        .padding(.horizontal, 12)
+        .padding(.vertical, 4)
+        .background(Color.Token.surfaceRaised, in: Capsule(style: .continuous))
+        .overlay {
+            Capsule(style: .continuous)
+                .strokeBorder(Color.Token.borderSubtle.opacity(0.65), lineWidth: 1)
+        }
+        // O badge é uma sobreposição do segmento; esta folga o mantém fora da
+        // track, sem aumentar artificialmente o tamanho da cápsula.
+        .padding(.top, 12)
+        .padding(.trailing, 12)
     }
 
     private var selectedIndex: Binding<Int> {

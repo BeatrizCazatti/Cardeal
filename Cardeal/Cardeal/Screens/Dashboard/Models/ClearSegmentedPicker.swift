@@ -18,7 +18,7 @@ struct TextWidthPreferenceKey: PreferenceKey {
 // MARK: - ClearSegmentedPicker
 public struct ClearSegmentedPicker: View {
     public let tabs: [String]
-    public let icons: [String]?
+//    public let icons: [String]?
     public let colors: [Color]?
     public let badges: [Int]?
     public let selectedTextColor: Color
@@ -37,7 +37,7 @@ public struct ClearSegmentedPicker: View {
 
     public init(
         tabs: [String],
-        icons: [String]? = nil,
+//        icons: [String]? = nil,
         colors: [Color]? = nil,
         badges: [Int]? = nil,
         selectedTextColor: Color = .white,
@@ -45,7 +45,6 @@ public struct ClearSegmentedPicker: View {
         currentTab: Binding<Int>
     ) {
         self.tabs = tabs
-        self.icons = icons
         self.colors = colors
         self.badges = badges
         self.selectedTextColor = selectedTextColor
@@ -124,10 +123,6 @@ public struct ClearSegmentedPicker: View {
                     select(index)
                 } label: {
                     HStack(spacing: 6) {
-                        if let icons = icons, index < icons.count {
-                            Image(systemName: icons[index])
-                                .font(.system(size: 14, weight: .semibold))
-                        }
                         Text(tabs[index])
                             .font(.system(size: 15, weight: currentTab == index ? .semibold : .medium, design: .rounded))
                     }

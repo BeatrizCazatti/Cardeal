@@ -227,6 +227,24 @@ private struct SidebarDetailView: View {
                 restoreDeletedItem: restoreDeletedItem,
                 createItem: createItem
             )
+        case .archived:
+            StoredItemsDetailView(
+                title: "Arquivados",
+                items: archivedItems,
+                actionTitle: "Desarquivar",
+                actionSystemImage: "tray.and.arrow.up",
+                searchText: $searchText,
+                action: unarchiveItem
+            )
+        case .deleted:
+            StoredItemsDetailView(
+                title: "Excluídos",
+                items: deletedItems,
+                actionTitle: "Restaurar",
+                actionSystemImage: "arrow.uturn.backward",
+                searchText: $searchText,
+                action: restoreDeletedItem
+            )
         case .attachments:
             AttachmentsView()
         case nil:
@@ -235,6 +253,40 @@ private struct SidebarDetailView: View {
                 systemImage: "sidebar.left"
             )
         }
+    }
+}
+
+private struct StoredItemsDetailView: View {
+    let title: String
+    let items: [StoredBoardItem]
+    let actionTitle: String
+    let actionSystemImage: String
+    @Binding var searchText: String
+    let action: (StoredBoardItem) -> Void
+
+    private var visibleItems: [StoredBoardItem] {
+        items.filter { $0.item.matches(searchQuery: searchText) }
+    }
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 24) {
+                Text(title)
+                    .font(.largeTitle.weight(.regular))
+                    .foregroundStyle(Color.Token.textBrand)
+
+                StoredItemsBoardView(
+                    items: visibleItems,
+                    title: title,
+                    actionTitle: actionTitle,
+                    actionSystemImage: actionSystemImage,
+                    action: action
+                )
+            }
+            .padding(24)
+        }
+        .background(Color.Token.backgroundPrimary)
+        .searchable(text: $searchText, placement: .toolbar, prompt: "Buscar cards")
     }
 }
 
@@ -255,35 +307,74 @@ struct DashboardContentView: View {
     let unarchiveItem: (StoredBoardItem) -> Void
     let restoreDeletedItem: (StoredBoardItem) -> Void
     let createItem: (BoardItemDraft, String, DashboardItemCategory) -> Void
+    @Environment(\.appTheme) private var theme
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 24) {
-                GreetingHeaderView(name: "Fabíola")
+        GeometryReader { proxy in
+            ZStack {
+                ThemeGradientBackground(theme: theme)
 
-                WeekNavigatorView(selection: $selectedWeek)
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 24) {
+                        // Cabeçalho com saudação e navegador de semana
+                        HStack(alignment: .center) {
+                            GreetingHeaderView(name: "Fabíola")
+                            Spacer()
+                            WeekNavigatorView(selection: $selectedWeek)
+                        }
 
-                HStack(alignment: .center, spacing: 16) {
-                    FilterTabsView(badgeStore: badgeStore, selection: $selectedTab)
-                    Spacer()
-                    ToolbarActionsView(teamNames: columns.map(\.title), createItem: createItem)
+                        HStack(alignment: .center, spacing: 16) {
+                            FilterTabsView(badgeStore: badgeStore, selection: $selectedTab)
+
+                            DashboardToolbarPrimaryButton(title: "Novo item", systemImage: "plus") {
+                                isNewItemPresented = true
+                            }
+
+                            Spacer(minLength: 16)
+
+                            DashboardRefreshStatusView()
+                        }
+
+                        dashboardBoard
+
+                        FooterView(lastUpdated: "29 de julho, 14:30h")
+                            .padding(.top, 8)
+                    }
+                    .padding(24)
+                    .frame(
+                        maxWidth: .infinity,
+                        minHeight: max(0, proxy.size.height - 20),
+                        alignment: .topLeading
+                    )
+                    .background {
+                        UnevenRoundedRectangle(
+                            topLeadingRadius: 20,
+                            bottomLeadingRadius: 0,
+                            bottomTrailingRadius: 0,
+                            topTrailingRadius: 20,
+                            style: .continuous
+                        )
+                        .fill(Color.Token.backgroundPrimary)
+                    }
+                    .padding(.top, 20)
+                    .padding(.horizontal, 20)
                 }
-
-                dashboardBoard
-
-                FooterView(lastUpdated: "29 de julho, 14:30h")
-                    .padding(.top, 8)
             }
-            .padding(24)
         }
-        .background(Color.Token.backgroundPrimary)
-        .searchable(
-            text: $searchText,
-            placement: .toolbar,
-            prompt: "Buscar cards, pessoas e locais"
-        )
         .navigationTitle("")
+        .toolbar {
+            ToolbarItemGroup(placement: .primaryAction) {
+                DashboardToolbarControls(teamNames: columns.map(\.title), searchText: $searchText)
+            }
+        }
+        .sheet(isPresented: $isNewItemPresented) {
+            NewBoardItemSheet(teamNames: columns.map(\.title)) { draft, team, category in
+                createItem(draft, team, category)
+            }
+        }
     }
+
+    @State private var isNewItemPresented = false
 
     @ViewBuilder
     private var dashboardBoard: some View {
@@ -386,25 +477,27 @@ struct WeekNavigatorView: View {
 }
 
 
-// MARK: - Botões de ação da toolbar (filtro, ordenar, atualizar, novo item)
+// MARK: - Controles do dashboard
 
-struct ToolbarActionsView: View {
+private struct DashboardToolbarControls: View {
     let teamNames: [String]
-    let createItem: (BoardItemDraft, String, DashboardItemCategory) -> Void
+    @Binding var searchText: String
 
     @State private var isSortPopoverPresented = false
     @State private var isFilterPopoverPresented = false
-    @State private var isNewItemPresented = false
+    @State private var isSearchExpanded = false
     @State private var sortOption: SortOption = .oldest
     @State private var selectedPeople: Set<String> = ["Leonardo Drummond", "Eduarda Vieira"]
     @State private var selectedSubjects: Set<String> = ["Pagamentos", "Entregas"]
     @State private var selectedTeams: Set<String> = ["Atendimento"]
+    @FocusState private var isSearchFieldFocused: Bool
 
     var body: some View {
-        HStack(spacing: 16) {
-            ToolbarIconButton(systemImage: "line.3.horizontal.decrease", accessibilityLabel: "Filtrar") {
+        HStack(spacing: 0) {
+            DashboardToolbarIconButton(systemImage: "line.3.horizontal.decrease", accessibilityLabel: "Filtrar") {
                 isFilterPopoverPresented.toggle()
                 isSortPopoverPresented = false
+                collapseSearch()
             }
             .popover(
                 isPresented: $isFilterPopoverPresented,
@@ -419,9 +512,13 @@ struct ToolbarActionsView: View {
                 )
             }
 
-            ToolbarIconButton(systemImage: "arrow.up.arrow.down", accessibilityLabel: "Ordenar") {
+            Divider()
+                .frame(height: 18)
+
+            DashboardToolbarIconButton(systemImage: "arrow.up.arrow.down", accessibilityLabel: "Ordenar") {
                 isSortPopoverPresented.toggle()
                 isFilterPopoverPresented = false
+                collapseSearch()
             }
             .popover(
                 isPresented: $isSortPopoverPresented,
@@ -431,18 +528,388 @@ struct ToolbarActionsView: View {
                 SortPopover(selection: $sortOption)
             }
 
-            DashboardToolbarPrimaryButton(title: "Atualizar", systemImage: "arrow.clockwise") {
+            Divider()
+                .frame(height: 18)
+
+            // Botão de busca expansível
+            ExpandableSearchButton(
+                searchText: $searchText,
+                isExpanded: $isSearchExpanded,
+                isSearchFieldFocused: $isSearchFieldFocused,
+                onCollapse: { isSearchExpanded = false }
+            )
+        }
+        .padding(3)
+        .background(.ultraThinMaterial, in: Capsule(style: .continuous))
+        .overlay {
+            Capsule(style: .continuous)
+                .strokeBorder(Color.Token.borderSubtle.opacity(0.75), lineWidth: 1)
+        }
+        .shadow(color: .black.opacity(0.06), radius: 5, y: 2)
+    }
+
+    private func collapseSearch() {
+        if isSearchExpanded {
+            withAnimation(.easeInOut(duration: 0.15)) {
+                isSearchExpanded = false
+            }
+        }
+    }
+}
+
+/// Botão de busca que expande para mostrar o campo de texto ao ser clicado
+private struct ExpandableSearchButton: View {
+    @Binding var searchText: String
+    @Binding var isExpanded: Bool
+    @FocusState.Binding var isSearchFieldFocused: Bool
+    let onCollapse: () -> Void
+    @StateObject private var recentSearchesStore = RecentSearchesStore.shared
+    @State private var showSuggestions: Bool = false
+
+    private var filteredSuggestions: [String] {
+        recentSearchesStore.filteredSuggestions(for: searchText)
+    }
+
+    private var showRecentSearches: Bool {
+        searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && isSearchFieldFocused
+    }
+
+    private var showFilteredSuggestions: Bool {
+        !searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && isSearchFieldFocused
+    }
+
+    var body: some View {
+        HStack(spacing: 0) {
+            // Botão do ícone de lupa (sempre visível)
+            Button {
+                withAnimation(.easeInOut(duration: 0.15)) {
+                    isExpanded.toggle()
+                    if isExpanded {
+                        // Pequeno delay para garantir que a animação termine antes de focar
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                            isSearchFieldFocused = true
+                        }
+                    } else {
+                        isSearchFieldFocused = false
+                        onCollapse()
+                    }
+                }
+            } label: {
+                Image(systemName: "magnifyingglass")
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(isExpanded || isSearchFieldFocused ? Color.Token.interactiveAccent : Color.Token.textSecondary)
+                    .frame(width: 30, height: 30)
+                    .contentShape(Circle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Buscar")
+
+            // Campo de busca expansível
+            if isExpanded {
+                searchFieldContent
+                    .transition(.asymmetric(
+                        insertion: .move(edge: .trailing).combined(with: .opacity),
+                        removal: .opacity.combined(with: .scale(scale: 0.8, anchor: .trailing))
+                    ))
+            }
+        }
+        .animation(.easeInOut(duration: 0.15), value: isExpanded)
+    }
+
+    @ViewBuilder
+    private var searchFieldContent: some View {
+        HStack(spacing: 8) {
+            // Campo de texto
+            TextField("Buscar cards, pessoas e locais", text: $searchText)
+                .textFieldStyle(.plain)
+                .font(.system(size: 13))
+                .foregroundStyle(Color.Token.textPrimary)
+                .focused($isSearchFieldFocused)
+                .frame(width: isSearchFieldFocused ? 280 : 200)
+                .onChange(of: searchText) { _, newValue in
+                    if !newValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                        withAnimation(.easeInOut(duration: 0.15)) {
+                            showSuggestions = true
+                        }
+                    } else {
+                        withAnimation(.easeInOut(duration: 0.15)) {
+                            showSuggestions = false
+                        }
+                    }
+                }
+                .onSubmit {
+                    if !searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                        recentSearchesStore.addSearch(searchText)
+                    }
+                }
+
+            // Botão de limpar (X) - aparece quando há texto
+            if !searchText.isEmpty {
+                Button {
+                    searchText = ""
+                    withAnimation(.easeInOut(duration: 0.15)) {
+                        showSuggestions = false
+                    }
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundStyle(Color.Token.textSecondary)
+                }
+                .buttonStyle(.plain)
+                .transition(.scale.combined(with: .opacity))
+            }
+
+            // Botão de fechar (X) - sempre visível quando expandido
+            Button {
+                withAnimation(.easeInOut(duration: 0.15)) {
+                    isExpanded = false
+                    isSearchFieldFocused = false
+                    onCollapse()
+                }
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(Color.Token.textSecondary)
+                    .frame(width: 30, height: 30)
+                    .contentShape(Circle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Fechar busca")
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background(
+            Capsule(style: .continuous)
+                .fill(Color.Token.surfaceRaised)
+                .overlay(
+                    Capsule(style: .continuous)
+                        .strokeBorder(Color.Token.borderSubtle, lineWidth: 1)
+                )
+        )
+        // Painel de sugestões
+        .popover(
+            isPresented: Binding(
+                get: { showSuggestions && isSearchFieldFocused && (showFilteredSuggestions || showRecentSearches) },
+                set: { showSuggestions = $0 }
+            ),
+            attachmentAnchor: .rect(.bounds),
+            arrowEdge: .bottom
+        ) {
+            suggestionsPopover
+                .frame(width: 340)
+        }
+        .onChange(of: isSearchFieldFocused) { _, focused in
+            if !focused {
+                // Delay para permitir cliques no popover
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                    if !showSuggestions {
+                        withAnimation(.easeInOut(duration: 0.15)) {
+                            isExpanded = false
+                            onCollapse()
+                        }
+                    }
+                }
+            } else {
+                withAnimation(.easeInOut(duration: 0.15)) {
+                    showSuggestions = true
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var suggestionsPopover: some View {
+        VStack(spacing: 0) {
+            if showFilteredSuggestions && !filteredSuggestions.isEmpty {
+                SearchSuggestionsPopoverSection(
+                    title: "Sugestões de Pesquisa",
+                    items: filteredSuggestions,
+                    onSelect: { suggestion in
+                        searchText = suggestion
+                        recentSearchesStore.addSearch(suggestion)
+                        isSearchFieldFocused = false
+                    },
+                    onDelete: { suggestion in
+                        recentSearchesStore.removeSearch(suggestion)
+                    }
+                )
+            } else if showRecentSearches && !recentSearchesStore.recentSearches.isEmpty {
+                SearchSuggestionsPopoverSection(
+                    title: "Pesquisas Recentes",
+                    items: recentSearchesStore.recentSearches,
+                    showClearAll: true,
+                    onSelect: { suggestion in
+                        searchText = suggestion
+                        recentSearchesStore.addSearch(suggestion)
+                        isSearchFieldFocused = false
+                    },
+                    onDelete: { suggestion in
+                        recentSearchesStore.removeSearch(suggestion)
+                    },
+                    onClearAll: {
+                        recentSearchesStore.clearAllSearches()
+                    }
+                )
+            } else if showRecentSearches && recentSearchesStore.recentSearches.isEmpty {
+                EmptyRecentSearchesPopoverView()
+            }
+        }
+        .padding(8)
+    }
+}
+
+/// Seção de sugestões para o popover
+private struct SearchSuggestionsPopoverSection: View {
+    let title: String
+    let items: [String]
+    var showClearAll: Bool = false
+    let onSelect: (String) -> Void
+    let onDelete: (String) -> Void
+    var onClearAll: (() -> Void)?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack {
+                Text(title)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Color.Token.textSecondary)
+                    .textCase(.uppercase)
+                    .tracking(0.5)
+
+                Spacer()
+
+                if showClearAll {
+                    Button("Limpar Tudo", action: onClearAll ?? {})
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(Color.Token.interactiveAccent)
+                        .buttonStyle(.plain)
+                }
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+
+            Divider()
+
+            ForEach(Array(items.enumerated()), id: \.element) { index, item in
+                SearchSuggestionPopoverRow(
+                    text: item,
+                    isLast: index == items.count - 1,
+                    onTap: { onSelect(item) },
+                    onDelete: { onDelete(item) }
+                )
+            }
+        }
+    }
+}
+
+/// Linha de sugestão para o popover
+private struct SearchSuggestionPopoverRow: View {
+    let text: String
+    let isLast: Bool
+    let onTap: () -> Void
+    let onDelete: () -> Void
+    @State private var isHovering: Bool = false
+
+    var body: some View {
+        Button(action: onTap) {
+            HStack(spacing: 10) {
+                Image(systemName: "clock.arrow.circlepath")
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(Color.Token.iconAccent)
+                    .frame(width: 20)
+
+                Text(text)
+                    .font(.system(size: 13))
+                    .foregroundStyle(Color.Token.textPrimary)
+                    .lineLimit(1)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                if isHovering {
+                    Button(action: onDelete) {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 10, weight: .semibold))
+                            .foregroundStyle(Color.Token.textSecondary)
+                            .frame(width: 20, height: 20)
+                            .background(Color.Token.surfaceRaised, in: Circle())
+                    }
+                    .buttonStyle(.plain)
+                    .transition(.scale.combined(with: .opacity))
+                }
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .background(isHovering ? Color.Token.surfaceRaised.opacity(0.5) : Color.clear)
+        .onHover { hovering in
+            withAnimation(.easeInOut(duration: 0.1)) {
+                isHovering = hovering
+            }
+        }
+
+        if !isLast {
+            Divider()
+                .padding(.leading, 42)
+        }
+    }
+}
+
+/// View para estado vazio no popover
+private struct EmptyRecentSearchesPopoverView: View {
+    var body: some View {
+        VStack(spacing: 10) {
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 24, weight: .light))
+                .foregroundStyle(Color.Token.textSecondary.opacity(0.5))
+
+            Text("Nenhuma pesquisa recente")
+                .font(.subheadline.weight(.medium))
+                .foregroundStyle(Color.Token.textSecondary)
+
+            Text("Suas pesquisas aparecerão aqui")
+                .font(.caption)
+                .foregroundStyle(Color.Token.textSecondary.opacity(0.7))
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 20)
+    }
+}
+
+private struct DashboardToolbarIconButton: View {
+    let systemImage: String
+    let accessibilityLabel: String
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: systemImage)
+                .font(.subheadline.weight(.medium))
+                .foregroundStyle(Color.Token.textSecondary)
+                .frame(width: 30, height: 30)
+                .contentShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(accessibilityLabel)
+    }
+}
+
+private struct DashboardRefreshStatusView: View {
+    var body: some View {
+        VStack(alignment: .trailing, spacing: 4) {
+            Button("Atualizar", systemImage: "arrow.clockwise") {
                 // Ação: atualizar
             }
-            DashboardToolbarPrimaryButton(title: "Novo Item", systemImage: "plus") {
-                isNewItemPresented = true
-            }
+            .labelStyle(.titleOnly)
+            .font(.caption.weight(.semibold))
+            .buttonStyle(.plain)
+            .foregroundStyle(Color.Token.interactiveAccent)
+
+            Text("Última atualização em 29 de julho, 14:30h")
+                .font(.caption2)
+                .foregroundStyle(Color.Token.textSecondary)
         }
-        .sheet(isPresented: $isNewItemPresented) {
-            NewBoardItemSheet(teamNames: teamNames) { draft, team, category in
-                createItem(draft, team, category)
-            }
-        }
+        .frame(minWidth: 205, alignment: .trailing)
     }
 }
 
@@ -589,7 +1056,6 @@ struct BoardView: View {
             .padding(.horizontal)
             .padding(.bottom)
         }
-        .scrollClipDisabled()
         .sheet(item: $selectedTeam) { team in
             TeamDetailSheet(team: team)
         }
@@ -642,7 +1108,6 @@ private struct StoredItemsBoardView: View {
                 .padding(.horizontal)
                 .padding(.bottom)
             }
-            .scrollClipDisabled()
         }
     }
 
@@ -910,18 +1375,19 @@ private struct UnreadCardActionsView: View {
 
 private struct BoardItemCardAppearanceModifier: ViewModifier {
     let isAwaitingReview: Bool
+    @Environment(\.appTheme) private var theme
 
     func body(content: Content) -> some View {
         if isAwaitingReview {
             content
                 .background(
                     RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .fill(Color.Token.surfaceAttention)
+                        .fill(theme.newCardFillColor)
                 )
                 .overlay(
                     RoundedRectangle(cornerRadius: 14, style: .continuous)
                         .stroke(
-                            Color.Token.statusWarning,
+                            theme.newCardStrokeColor,
                             style: StrokeStyle(lineWidth: 2, dash: [10, 8])
                         )
                 )
