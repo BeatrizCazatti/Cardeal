@@ -317,7 +317,6 @@ struct DashboardContentView: View {
     let unarchiveItem: (StoredBoardItem) -> Void
     let restoreDeletedItem: (StoredBoardItem) -> Void
     let createItem: (BoardItemDraft, String, DashboardItemCategory) -> Void
-    @Environment(\.appTheme) private var theme
 
     var body: some View {
         GeometryReader { proxy in
@@ -343,9 +342,6 @@ struct DashboardContentView: View {
                     }
 
                     dashboardBoard
-
-                    FooterView(lastUpdated: "29 de julho, 14:30h")
-                        .padding(.top, 8)
                 }
                 .padding(24)
                 .frame(

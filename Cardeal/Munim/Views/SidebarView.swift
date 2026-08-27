@@ -34,6 +34,12 @@ struct SidebarView: View {
             }
         }
         .listStyle(.sidebar)
+        // Material translúcido (efeito "Liquid Glass") para que o gradiente
+        // do tema, aplicado por trás no nível do NavigationSplitView, fique
+        // visível através da coluna da sidebar. `.ultraThinMaterial` é o
+        // fallback oficial do projeto para glassEffect em versões anteriores.
+        .scrollContentBackground(.hidden)
+        .background(.ultraThinMaterial)
         .navigationTitle("Painel")
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
