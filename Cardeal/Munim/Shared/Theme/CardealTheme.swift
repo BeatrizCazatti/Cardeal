@@ -6,18 +6,29 @@ enum AppTheme: String, CaseIterable, Identifiable {
     case plum
     case munim
     case peach
-    case blueBerry
+    case blueberry
 
     static let storageKey = "appTheme"
-    static let defaultTheme: Self = .munim
+    static let defaultTheme: Self = .blueberry
 
     var id: String { rawValue }
+
+    /// Nome exibido na interface (Configurações → Aparência).
+    var title: String {
+        switch self {
+        case .munim: "Munim"
+        case .peach: "Peach"
+        case .plum: "Plum"
+        case .blueberry: "Blueberry"
+        }
+    }
 
     init(storedValue: String) {
         switch storedValue {
         case Self.munim.rawValue, "blue": self = .munim
         case Self.peach.rawValue, "green": self = .peach
         case Self.plum.rawValue, "violet": self = .plum
+        case Self.blueberry.rawValue: self = .blueberry
         default: self = Self.defaultTheme
         }
     }
@@ -27,7 +38,7 @@ enum AppTheme: String, CaseIterable, Identifiable {
         case .plum: Color.Token.themePlumAccent
         case .munim: Color.Token.themeMunimAccent
         case .peach: Color.Token.themePeachAccent
-        case .blueBerry: Color.Token.themePeachAccent
+        case .blueberry: Color.Token.themeBlueberryAccent
         }
     }
 
@@ -57,9 +68,13 @@ enum AppTheme: String, CaseIterable, Identifiable {
                 Color(hex: 0xD8AFEA).opacity(0.5),
                 Color(hex: 0xFF4CDB).opacity(0.5)
             ]
-        case .blueBerry:
+        case .blueberry:
             [
-                Color(hex: 0xADCCFD).opacity(0.5)
+                Color(hex: 0x3B82F6).opacity(0.5),
+                Color(hex: 0xADCCFD).opacity(0.5),
+                Color(hex: 0x8DABF4).opacity(0.5),
+                Color(hex: 0xC7D2FE).opacity(0.5),
+                Color(hex: 0xE0E7FF).opacity(0.5)
             ]
         }
     }
@@ -70,7 +85,7 @@ enum AppTheme: String, CaseIterable, Identifiable {
         case .munim: Color(hex: 0xEEFFD4)
         case .peach: Color(hex: 0xFFF7E9)
         case .plum: Color(hex: 0xEFEBFF)
-        case .blueBerry: Color(hex: 0xF1FBFF)
+        case .blueberry: Color(hex: 0xF1FBFF)
         }
     }
 
@@ -79,7 +94,7 @@ enum AppTheme: String, CaseIterable, Identifiable {
         case .munim: Color(hex: 0x75BC08)
         case .peach: Color(hex: 0xFF9365)
         case .plum: Color(hex: 0x361AA8)
-        case .blueBerry: Color(hex: 0x8DABF4)
+        case .blueberry: Color(hex: 0x8DABF4)
         }
     }
 }
@@ -144,6 +159,6 @@ extension Color {
         static let themePlumAccent = Color("Theme/Plum/Accent")
         static let themeMunimAccent = Color("Theme/Munim/Accent")
         static let themePeachAccent = Color("Theme/Peach/Accent")
-        static let themeBlueBerryAccent = Color("Theme/BlueBerry/Accent")
+        static let themeBlueberryAccent = Color("Theme/Blueberry/Accent")
     }
 }

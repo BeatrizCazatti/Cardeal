@@ -30,6 +30,8 @@ struct WeekRangePicker: View {
     @State private var endDate: Date
     @State private var selectionPhase: SelectionPhase
 
+    @Environment(\.appTheme) private var theme
+
     private let calendar = Calendar.dashboard
 
     init(selection: Binding<WeekRange>) {
@@ -179,7 +181,7 @@ private extension WeekRangePicker {
                 .contentShape(Circle())
         }
         .buttonStyle(.plain)
-        .foregroundStyle(Color.Token.interactiveAccent)
+        .foregroundStyle(theme.accentColor)
         .background(Capsule().fill(Color.Token.interactiveAccent.opacity(0.09)))
         .accessibilityLabel(label)
     }

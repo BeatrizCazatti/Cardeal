@@ -1409,7 +1409,7 @@ private struct BoardItemCardAppearanceModifier: ViewModifier {
                     RoundedRectangle(cornerRadius: 14, style: .continuous)
                         .stroke(
                             theme.newCardStrokeColor,
-                            style: StrokeStyle(lineWidth: 2, dash: [10, 8])
+                            style: StrokeStyle(lineWidth: 2, dash: [5, 6])
                         )
                 )
                 .shadow(color: .black.opacity(0.08), radius: 8, y: 3)

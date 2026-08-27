@@ -72,12 +72,12 @@ private struct GeneralSettingsView: View {
     var body: some View {
         Form {
             Section {
-                Picker("Tema da interface", selection: $model.appearance) {
-                    ForEach(InterfaceAppearance.allCases) { appearance in
-                        Text(appearance.title).tag(appearance)
+                Picker("Tema da interface", selection: $model.palette) {
+                    ForEach(AppTheme.allCases) { theme in
+                        Text(theme.title).tag(theme)
                     }
                 }
-                Text("Selecione “Automático” para seguir a preferência do sistema.")
+                Text("Escolha a paleta visual aplicada ao dashboard e à janela principal.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             } header: {
