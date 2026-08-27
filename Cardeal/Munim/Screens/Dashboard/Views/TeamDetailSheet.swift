@@ -677,7 +677,7 @@ private struct ProfileAvatar: View {
 
     private var color: Color {
         switch name.unicodeScalars.first?.value ?? 0 {
-        case 65...70: Color.Token.themeStandardAccent
+        case 65...70: Color.Token.themePlumAccent
         case 71...76: Color.Token.statusSuccess
         case 77...82: Color.Token.statusWarning
         default: Color.Token.interactiveAccent

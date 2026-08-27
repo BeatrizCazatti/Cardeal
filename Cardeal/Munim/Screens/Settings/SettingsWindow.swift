@@ -247,7 +247,7 @@ private struct IntegrationRow: View {
                     .fill(account.integration.accent)
                 Image(systemName: account.integration.icon)
                     .foregroundStyle(.white)
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.subheadline.weight(.semibold))
             }
             .frame(width: 28, height: 28)
 

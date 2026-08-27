@@ -124,7 +124,10 @@ public struct ClearSegmentedPicker: View {
                 } label: {
                     HStack(spacing: 6) {
                         Text(tabs[index])
-                            .font(.system(size: 15, weight: currentTab == index ? .semibold : .medium, design: .rounded))
+                            .font(currentTab == index ? .body.weight(.semibold) : .body.weight(.medium))
+                            .fontDesign(.rounded)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.85)
                     }
                     .foregroundColor(currentTab == index ? selectedTextColor : unselectedTextColor)
                     .padding(.horizontal, horizontalPadding)

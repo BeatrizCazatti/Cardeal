@@ -3,29 +3,31 @@ import SwiftUI
 /// Temas disponíveis para o aplicativo. Cada tema aponta somente para tokens
 /// semânticos do catálogo de assets, mantendo a mudança de paleta centralizada.
 enum AppTheme: String, CaseIterable, Identifiable {
-    case standard
-    case ocean
-    case nature
+    case plum
+    case munim
+    case peach
+    case blueBerry
 
     static let storageKey = "appTheme"
-    static let defaultTheme: Self = .ocean
+    static let defaultTheme: Self = .munim
 
     var id: String { rawValue }
 
     init(storedValue: String) {
         switch storedValue {
-        case Self.ocean.rawValue, "blue": self = .ocean
-        case Self.nature.rawValue, "green": self = .nature
-        case Self.standard.rawValue, "violet": self = .standard
+        case Self.munim.rawValue, "blue": self = .munim
+        case Self.peach.rawValue, "green": self = .peach
+        case Self.plum.rawValue, "violet": self = .plum
         default: self = Self.defaultTheme
         }
     }
 
     var accentColor: Color {
         switch self {
-        case .standard: Color.Token.themeStandardAccent
-        case .ocean: Color.Token.themeOceanAccent
-        case .nature: Color.Token.themeNatureAccent
+        case .plum: Color.Token.themePlumAccent
+        case .munim: Color.Token.themeMunimAccent
+        case .peach: Color.Token.themePeachAccent
+        case .blueBerry: Color.Token.themePeachAccent
         }
     }
 
@@ -33,21 +35,21 @@ enum AppTheme: String, CaseIterable, Identifiable {
     /// delimitam o Dashboard e compõem o cabeçalho do detalhe da equipe.
     var gradientColors: [Color] {
         switch self {
-        case .ocean:
+        case .munim:
             [
                 Color(hex: 0x1148D1).opacity(0.5),
                 Color(hex: 0xB3FC2E).opacity(0.5),
                 Color(hex: 0xD8F295).opacity(0.5),
                 Color(hex: 0xFAFF73).opacity(0.5)
             ]
-        case .nature:
+        case .peach:
             [
                 Color(hex: 0xFF865C).opacity(0.5),
                 Color(hex: 0xFF95CC).opacity(0.5),
                 Color(hex: 0xFFA875).opacity(0.5),
                 Color(hex: 0xFFD66D).opacity(0.5)
             ]
-        case .standard:
+        case .plum:
             [
                 Color(hex: 0x3A1ACB).opacity(0.5),
                 Color(hex: 0x6BA4FF).opacity(0.5),
@@ -55,23 +57,29 @@ enum AppTheme: String, CaseIterable, Identifiable {
                 Color(hex: 0xD8AFEA).opacity(0.5),
                 Color(hex: 0xFF4CDB).opacity(0.5)
             ]
+        case .blueBerry:
+            [
+                Color(hex: 0xADCCFD).opacity(0.5)
+            ]
         }
     }
 
     /// Cores exclusivas dos cards recém-criados, visíveis até a revisão.
     var newCardFillColor: Color {
         switch self {
-        case .ocean: Color(hex: 0xEEFFD4)
-        case .nature: Color(hex: 0xFFF7E9)
-        case .standard: Color(hex: 0xEFEBFF)
+        case .munim: Color(hex: 0xEEFFD4)
+        case .peach: Color(hex: 0xFFF7E9)
+        case .plum: Color(hex: 0xEFEBFF)
+        case .blueBerry: Color(hex: 0xF1FBFF)
         }
     }
 
     var newCardStrokeColor: Color {
         switch self {
-        case .ocean: Color(hex: 0x75BC08)
-        case .nature: Color(hex: 0xFF9365)
-        case .standard: Color(hex: 0x361AA8)
+        case .munim: Color(hex: 0x75BC08)
+        case .peach: Color(hex: 0xFF9365)
+        case .plum: Color(hex: 0x361AA8)
+        case .blueBerry: Color(hex: 0x8DABF4)
         }
     }
 }
@@ -133,8 +141,9 @@ extension Color {
         static let statusNotification = Color("Status/Notification")
         static let statusSuccess = Color("Status/Success")
         static let statusWarning = Color("Status/Warning")
-        static let themeStandardAccent = Color("Theme/Standard/Accent")
-        static let themeOceanAccent = Color("Theme/Ocean/Accent")
-        static let themeNatureAccent = Color("Theme/Nature/Accent")
+        static let themePlumAccent = Color("Theme/Plum/Accent")
+        static let themeMunimAccent = Color("Theme/Munim/Accent")
+        static let themePeachAccent = Color("Theme/Peach/Accent")
+        static let themeBlueBerryAccent = Color("Theme/BlueBerry/Accent")
     }
 }

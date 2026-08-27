@@ -622,7 +622,7 @@ private struct ExpandableSearchButton: View {
             // Campo de texto
             TextField("Buscar cards, pessoas e locais", text: $searchText)
                 .textFieldStyle(.plain)
-                .font(.system(size: 13))
+                .font(.callout)
                 .foregroundStyle(Color.Token.textPrimary)
                 .focused($isSearchFieldFocused)
                 .frame(width: isSearchFieldFocused ? 280 : 200)
@@ -652,7 +652,7 @@ private struct ExpandableSearchButton: View {
                     }
                 } label: {
                     Image(systemName: "xmark.circle.fill")
-                        .font(.system(size: 14, weight: .medium))
+                        .font(.subheadline.weight(.medium))
                         .foregroundStyle(Color.Token.textSecondary)
                 }
                 .buttonStyle(.plain)
@@ -814,12 +814,12 @@ private struct SearchSuggestionPopoverRow: View {
         Button(action: onTap) {
             HStack(spacing: 10) {
                 Image(systemName: "clock.arrow.circlepath")
-                    .font(.system(size: 13, weight: .medium))
+                    .font(.callout.weight(.medium))
                     .foregroundStyle(Color.Token.iconAccent)
                     .frame(width: 20)
 
                 Text(text)
-                    .font(.system(size: 13))
+                    .font(.callout)
                     .foregroundStyle(Color.Token.textPrimary)
                     .lineLimit(1)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -827,7 +827,7 @@ private struct SearchSuggestionPopoverRow: View {
                 if isHovering {
                     Button(action: onDelete) {
                         Image(systemName: "xmark")
-                            .font(.system(size: 10, weight: .semibold))
+                            .font(.caption2.weight(.semibold))
                             .foregroundStyle(Color.Token.textSecondary)
                             .frame(width: 20, height: 20)
                             .background(Color.Token.surfaceRaised, in: Circle())
@@ -860,7 +860,7 @@ private struct EmptyRecentSearchesPopoverView: View {
     var body: some View {
         VStack(spacing: 10) {
             Image(systemName: "magnifyingglass")
-                .font(.system(size: 24, weight: .light))
+                .font(.title2.weight(.light))
                 .foregroundStyle(Color.Token.textSecondary.opacity(0.5))
 
             Text("Nenhuma pesquisa recente")
@@ -1029,6 +1029,9 @@ struct BoardView: View {
     @State private var itemPendingDeletion: PendingDeletion?
 
     var body: some View {
+        // Altura mínima confortável para o board, sem cortar cards em telas comuns.
+        // Em janelas muito altas o board cresce junto, evitando desperdiçar espaço
+        // sem prender o usuário a um valor fixo pequeno demais.
         ScrollView(.horizontal, showsIndicators: false) {
             LazyHStack(alignment: .top, spacing: 32) {
                 ForEach(columns.map { $0.filtered(by: filter, matching: searchText) }) { column in
@@ -1056,6 +1059,7 @@ struct BoardView: View {
             .padding(.horizontal)
             .padding(.bottom)
         }
+        .frame(minHeight: 520)
         .sheet(item: $selectedTeam) { team in
             TeamDetailSheet(team: team)
         }
@@ -1108,6 +1112,7 @@ private struct StoredItemsBoardView: View {
                 .padding(.horizontal)
                 .padding(.bottom)
             }
+            .frame(minHeight: 520)
         }
     }
 
@@ -1130,14 +1135,18 @@ private struct StoredItemsColumnView: View {
                 .font(.headline)
                 .foregroundStyle(Color.Token.textPrimary)
             Divider()
-            ForEach(items) { storedItem in
-                StoredBoardItemCard(
-                    item: storedItem,
-                    timestampTitle: timestampTitle,
-                    actionTitle: actionTitle,
-                    actionSystemImage: actionSystemImage,
-                    action: { action(storedItem) }
-                )
+            ScrollView(.vertical, showsIndicators: false) {
+                LazyVStack(alignment: .leading, spacing: 12) {
+                    ForEach(items) { storedItem in
+                        StoredBoardItemCard(
+                            item: storedItem,
+                            timestampTitle: timestampTitle,
+                            actionTitle: actionTitle,
+                            actionSystemImage: actionSystemImage,
+                            action: { action(storedItem) }
+                        )
+                    }
+                }
             }
         }
     }
@@ -1203,6 +1212,8 @@ struct BoardColumnView: View {
                 Text(column.title)
                     .font(.headline)
                     .foregroundStyle(Color.Token.textPrimary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.85)
                 Spacer()
                 Image(systemName: "arrow.down.left.and.arrow.up.right")
             }
@@ -1214,14 +1225,20 @@ struct BoardColumnView: View {
             if column.items.isEmpty {
                 EmptyColumnView()
             } else {
-                ForEach(column.items) { item in
-                    BoardItemCardView(
-                        item: item,
-                        markAsReviewed: markAsReviewed,
-                        updateItem: updateItem,
-                        archiveItem: archiveItem,
-                        requestDeletion: requestDeletion
-                    )
+                // Lista vertical rolável independente do scroll horizontal do board,
+                // garantindo que cards longos não sejam cortados em janelas baixas.
+                ScrollView(.vertical, showsIndicators: false) {
+                    LazyVStack(alignment: .leading, spacing: 12) {
+                        ForEach(column.items) { item in
+                            BoardItemCardView(
+                                item: item,
+                                markAsReviewed: markAsReviewed,
+                                updateItem: updateItem,
+                                archiveItem: archiveItem,
+                                requestDeletion: requestDeletion
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -1239,7 +1256,8 @@ struct EmptyColumnView: View {
                 .font(.subheadline)
                 .foregroundStyle(Color.Token.textSecondary)
         }
-        .frame(maxWidth: .infinity, minHeight: 160)
+        .frame(maxWidth: .infinity)
+        .frame(minHeight: 160)
         .padding(.top, 24)
     }
 }
@@ -1263,6 +1281,7 @@ struct BoardItemCardView: View {
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(Color.Token.textPrimary)
                         .lineLimit(2)
+                        .minimumScaleFactor(0.85)
 
                     Spacer(minLength: 8)
 
@@ -1278,6 +1297,7 @@ struct BoardItemCardView: View {
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(Color.Token.textPrimary)
                         .lineLimit(2)
+                        .minimumScaleFactor(0.85)
 
                     Spacer(minLength: 8)
 
@@ -1306,6 +1326,7 @@ struct BoardItemCardView: View {
                     .font(.caption)
                     .foregroundStyle(Color.Token.textSecondary)
                     .lineLimit(3)
+                    .minimumScaleFactor(0.9)
 
                 if description.count > 120 {
                     Button("Ler mais") {

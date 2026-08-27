@@ -78,7 +78,7 @@ struct FilterTabsView: View {
     private func color(for destination: DashboardTabDestination) -> Color {
         switch destination {
         case .active: Color.Token.interactiveAccent
-        case .archived: Color.Token.themeOceanAccent
+        case .archived: Color.Token.themeMunimAccent
         case .deleted: Color.Token.statusAttention
         }
     }

@@ -29,12 +29,12 @@ struct SearchFieldView: View {
             // Campo de texto principal
             HStack(spacing: 10) {
                 Image(systemName: "magnifyingglass")
-                    .font(.system(size: 16, weight: .medium))
+                    .font(.body.weight(.medium))
                     .foregroundStyle(isFocused ? Color.Token.interactiveAccent : Color.Token.textSecondary)
 
                 TextField(placeholder, text: $searchText)
                     .textFieldStyle(.plain)
-                    .font(.system(size: 15))
+                    .font(.body)
                     .foregroundStyle(Color.Token.textPrimary)
                     .focused($isTextFieldFocused)
                     .onChange(of: searchText) { _, newValue in
@@ -66,7 +66,7 @@ struct SearchFieldView: View {
                         }
                     }) {
                         Image(systemName: "xmark.circle.fill")
-                            .font(.system(size: 16, weight: .medium))
+                            .font(.body.weight(.medium))
                             .foregroundStyle(Color.Token.textSecondary)
                     }
                     .buttonStyle(.plain)
@@ -223,12 +223,12 @@ private struct SearchSuggestionRow: View {
         Button(action: onTap) {
             HStack(spacing: 10) {
                 Image(systemName: "clock.arrow.circlepath")
-                    .font(.system(size: 14, weight: .medium))
+                    .font(.subheadline.weight(.medium))
                     .foregroundStyle(Color.Token.iconAccent)
                     .frame(width: 20)
 
                 Text(text)
-                    .font(.system(size: 14))
+                    .font(.subheadline)
                     .foregroundStyle(Color.Token.textPrimary)
                     .lineLimit(1)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -237,7 +237,7 @@ private struct SearchSuggestionRow: View {
                 if isHovering {
                     Button(action: onDelete) {
                         Image(systemName: "xmark")
-                            .font(.system(size: 11, weight: .semibold))
+                            .font(.caption2.weight(.semibold))
                             .foregroundStyle(Color.Token.textSecondary)
                             .frame(width: 24, height: 24)
                             .background(Color.Token.surfaceRaised, in: Circle())
@@ -272,7 +272,7 @@ private struct EmptyRecentSearchesView: View {
     var body: some View {
         VStack(spacing: 12) {
             Image(systemName: "magnifyingglass")
-                .font(.system(size: 28, weight: .light))
+                .font(.title.weight(.light))
                 .foregroundStyle(Color.Token.textSecondary.opacity(0.5))
 
             Text("Nenhuma pesquisa recente")
