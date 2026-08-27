@@ -1,9 +1,3 @@
-//
-//  SortPopover.swift
-//  Cardeal
-//
-//  Created by Beatriz Cazatti on 11/08/26.
-//
 import SwiftUI
 
 struct SortPopover: View {

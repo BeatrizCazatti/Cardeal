@@ -91,7 +91,7 @@ private struct GeneralSettingsView: View {
                     }
                 }
                 .pickerStyle(.menu)
-                Text("Define a frequência com que o Cardeal consulta o backend por atualizações.")
+                Text("Define a frequência com que o Munim consulta o backend por atualizações.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             } header: {
@@ -522,7 +522,7 @@ private struct AutomationsSettingsView: View {
                 }
                 .padding(.vertical, 4)
 
-                Text("Define o quão criterioso o Cardeal deve ser ao sugerir decisões e agendamentos a partir das conversas.")
+                Text("Define o quão criterioso o Munim deve ser ao sugerir decisões e agendamentos a partir das conversas.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             } header: {
@@ -533,7 +533,7 @@ private struct AutomationsSettingsView: View {
                 Toggle(isOn: $model.requiresSchedulingConfirmation) {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Exigir confirmação manual prévia antes de criar agendamentos no calendário")
-                        Text("Quando desativado, o Cardeal cria eventos automaticamente. Recomendado para times pequenos.")
+                        Text("Quando desativado, o Munim cria eventos automaticamente. Recomendado para times pequenos.")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }

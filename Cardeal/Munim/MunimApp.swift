@@ -1,7 +1,7 @@
 import SwiftUI
 
 @main
-struct CardealApp: App {
+struct MunimApp: App {
     @AppStorage(AppTheme.storageKey) private var storedTheme = AppTheme.defaultTheme.rawValue
     @AppStorage(InterfaceAppearance.storageKey) private var storedAppearance = InterfaceAppearance.system.rawValue
 

@@ -31,12 +31,12 @@
 ## Comandos
 - Build: `xcodebuild -scheme Cardeal -configuration Debug build`.
 - Test: `xcodebuild -scheme Cardeal -configuration Debug test`.
-- Abrir projeto: `open Cardeal.xcodeproj`.
+- Abrir projeto: `open Munim.xcodeproj`.
 
 ## Estrutura
 ```
-Cardeal/
-├── CardealApp.swift
+Munim/
+├── MunimApp.swift
 ├── Assets.xcassets/
 ├── Screens/
 │   ├── Dashboard/
