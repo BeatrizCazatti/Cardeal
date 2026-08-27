@@ -11,9 +11,9 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		384F6FA1301FC92D00EBF2B3 /* Cardeal */ = {
+		384F6FA1301FC92D00EBF2B3 /* Munim */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = Cardeal;
+			path = Munim;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -32,7 +32,7 @@
 		384F6F96301FC92D00EBF2B3 = {
 			isa = PBXGroup;
 			children = (
-				384F6FA1301FC92D00EBF2B3 /* Cardeal */,
+				384F6FA1301FC92D00EBF2B3 /* Munim */,
 				384F6FA0301FC92D00EBF2B3 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -61,7 +61,7 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				384F6FA1301FC92D00EBF2B3 /* Cardeal */,
+				384F6FA1301FC92D00EBF2B3 /* Munim */,
 			);
 			name = Cardeal;
 			packageProductDependencies = (
@@ -85,7 +85,7 @@
 					};
 				};
 			};
-			buildConfigurationList = 384F6F9A301FC92D00EBF2B3 /* Build configuration list for PBXProject "Cardeal" */;
+			buildConfigurationList = 384F6F9A301FC92D00EBF2B3 /* Build configuration list for PBXProject "Munim" */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -259,7 +259,7 @@
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = Orama;
+				INFOPLIST_KEY_CFBundleDisplayName = Munim;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.business";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -293,7 +293,7 @@
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = Orama;
+				INFOPLIST_KEY_CFBundleDisplayName = Munim;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.business";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -316,7 +316,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		384F6F9A301FC92D00EBF2B3 /* Build configuration list for PBXProject "Cardeal" */ = {
+		384F6F9A301FC92D00EBF2B3 /* Build configuration list for PBXProject "Munim" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				384F6FA8301FC92E00EBF2B3 /* Debug */,
