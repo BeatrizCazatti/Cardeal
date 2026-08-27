@@ -7,7 +7,7 @@
 	objects = {
 
 /* Begin PBXFileReference section */
-		384F6F9F301FC92D00EBF2B3 /* Cardeal.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Cardeal.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		384F6F9F301FC92D00EBF2B3 /* Munim.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Munim.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -40,7 +40,7 @@
 		384F6FA0301FC92D00EBF2B3 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				384F6F9F301FC92D00EBF2B3 /* Cardeal.app */,
+				384F6F9F301FC92D00EBF2B3 /* Munim.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -48,9 +48,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		384F6F9E301FC92D00EBF2B3 /* Cardeal */ = {
+		384F6F9E301FC92D00EBF2B3 /* Munim */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 384F6FAA301FC92E00EBF2B3 /* Build configuration list for PBXNativeTarget "Cardeal" */;
+			buildConfigurationList = 384F6FAA301FC92E00EBF2B3 /* Build configuration list for PBXNativeTarget "Munim" */;
 			buildPhases = (
 				384F6F9B301FC92D00EBF2B3 /* Sources */,
 				384F6F9C301FC92D00EBF2B3 /* Frameworks */,
@@ -63,11 +63,11 @@
 			fileSystemSynchronizedGroups = (
 				384F6FA1301FC92D00EBF2B3 /* Munim */,
 			);
-			name = Cardeal;
+			name = Munim;
 			packageProductDependencies = (
 			);
 			productName = Cardeal;
-			productReference = 384F6F9F301FC92D00EBF2B3 /* Cardeal.app */;
+			productReference = 384F6F9F301FC92D00EBF2B3 /* Munim.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -99,7 +99,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				384F6F9E301FC92D00EBF2B3 /* Cardeal */,
+				384F6F9E301FC92D00EBF2B3 /* Munim */,
 			);
 		};
 /* End PBXProject section */
@@ -325,7 +325,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		384F6FAA301FC92E00EBF2B3 /* Build configuration list for PBXNativeTarget "Cardeal" */ = {
+		384F6FAA301FC92E00EBF2B3 /* Build configuration list for PBXNativeTarget "Munim" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				384F6FAB301FC92E00EBF2B3 /* Debug */,

@@ -47,13 +47,13 @@ struct WeekRangePicker: View {
         VStack(alignment: .leading, spacing: 0) {
             Text("Selecione um período")
                 .font(.title2.weight(.semibold))
-                .foregroundStyle(Color.Token.interactiveAccent)
+                .foregroundStyle(theme.calendar)
                 .padding(.bottom, 28)
 
             HStack {
                 Text(monthTitle)
                     .font(.title3.weight(.semibold))
-                    .foregroundStyle(Color.Token.textPrimary)
+                    .foregroundStyle(Color.secondary)
                 Spacer()
                 monthButton(systemImage: "chevron.left", label: "Mês anterior") {
                     changeMonth(by: -1)
@@ -82,10 +82,10 @@ struct WeekRangePicker: View {
                 }
             }
             .padding(8)
-            .background(
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .fill(Color.Token.interactiveAccent.opacity(0.045))
-            )
+//            .background(
+//                RoundedRectangle(cornerRadius: 18, style: .continuous)
+//                    .fill(Color.green.opacity(0.045))
+//            )
         }
         .padding(24)
         .frame(width: 430)
@@ -181,8 +181,8 @@ private extension WeekRangePicker {
                 .contentShape(Circle())
         }
         .buttonStyle(.plain)
-        .foregroundStyle(theme.accentColor)
-        .background(Capsule().fill(Color.Token.interactiveAccent.opacity(0.09)))
+        .foregroundStyle(theme.calendar)
+        .background(Capsule().fill(theme.calendar.opacity(0.09)))
         .accessibilityLabel(label)
     }
 }
@@ -199,6 +199,7 @@ private struct CalendarDayButton: View {
     let isToday: Bool
     let action: () -> Void
     @State private var isHovering = false
+    @Environment(\.appTheme) private var theme
 
     var body: some View {
         Button(action: action) {
@@ -232,15 +233,15 @@ private struct CalendarDayButton: View {
             switch state {
             case .middle:
                 Rectangle()
-                    .fill(Color.Token.interactiveAccent.opacity(0.14))
+                    .fill(theme.calendar.opacity(0.14))
             case .start:
                 Rectangle()
-                    .fill(Color.Token.interactiveAccent.opacity(0.14))
+                    .fill(theme.calendar.opacity(0.14))
                     .frame(width: halfWidth)
                     .frame(maxWidth: .infinity, alignment: .trailing)
             case .end:
                 Rectangle()
-                    .fill(Color.Token.interactiveAccent.opacity(0.14))
+                    .fill(theme.calendar.opacity(0.14))
                     .frame(width: halfWidth)
                     .frame(maxWidth: .infinity, alignment: .leading)
             case .none, .single:
@@ -254,12 +255,12 @@ private struct CalendarDayButton: View {
     private var dayIndicator: some View {
         ZStack {
             if state == .start || state == .end || state == .single {
-                Circle().fill(Color.Token.interactiveAccent)
+                Circle().fill(theme.calendar)
             } else if isToday {
-                Circle().strokeBorder(Color.Token.interactiveAccent, lineWidth: 1.5)
+                Circle().strokeBorder(theme.calendar, lineWidth: 1.5)
                     .padding(6)
             } else if isHovering {
-                Capsule().fill(Color.Token.interactiveAccent.opacity(0.08))
+                Capsule().fill(theme.calendar.opacity(0.08))
                     .padding(.horizontal, 2)
                     .padding(.vertical, 4)
             }

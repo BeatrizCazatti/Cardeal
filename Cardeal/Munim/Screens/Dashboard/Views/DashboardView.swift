@@ -28,30 +28,40 @@ struct DashboardView: View {
     @State private var isArchiveUndoPresented = false
     @State private var searchText: String = ""
     @State private var selectedWeek = WeekRange(start: Date())
+    @Environment(\.appTheme) private var theme
     var body: some View {
-        NavigationSplitView(columnVisibility: $columnVisibility) {
-            SidebarView(selection: $selectedDestination)
-                .navigationSplitViewColumnWidth(min: 180, ideal: 220, max: 260)
-        } detail: {
-            SidebarDetailView(
-                selection: selectedDestination,
-                searchText: $searchText,
-                selectedWeek: $selectedWeek,
-                selectedTab: $selectedTab,
-                badgeStore: badgeStore,
-                columns: columns,
-                archivedItems: archivedItems,
-                deletedItems: deletedItems,
-                markAsReviewed: markAsReviewed,
-                updateItem: updateItem,
-                archiveItem: archiveItem,
-                deleteItem: deleteItem,
-                unarchiveItem: unarchiveItem,
-                restoreDeletedItem: restoreDeletedItem,
-                createItem: createItem
-            )
+        ZStack {
+            // O gradiente vive no nível do SplitView para preencher
+            // a janela inteira — inclusive a coluna da sidebar, que
+            // fica translúcida (.ultraThinMaterial) e deixa o gradiente
+            // aparecer através dos itens.
+            ThemeGradientBackground(theme: theme)
+                .ignoresSafeArea()
+
+            NavigationSplitView(columnVisibility: $columnVisibility) {
+                SidebarView(selection: $selectedDestination)
+                    .navigationSplitViewColumnWidth(min: 180, ideal: 220, max: 260)
+            } detail: {
+                SidebarDetailView(
+                    selection: selectedDestination,
+                    searchText: $searchText,
+                    selectedWeek: $selectedWeek,
+                    selectedTab: $selectedTab,
+                    badgeStore: badgeStore,
+                    columns: columns,
+                    archivedItems: archivedItems,
+                    deletedItems: deletedItems,
+                    markAsReviewed: markAsReviewed,
+                    updateItem: updateItem,
+                    archiveItem: archiveItem,
+                    deleteItem: deleteItem,
+                    unarchiveItem: unarchiveItem,
+                    restoreDeletedItem: restoreDeletedItem,
+                    createItem: createItem
+                )
+            }
+            .navigationSplitViewStyle(.balanced)
         }
-        .navigationSplitViewStyle(.balanced)
         .onAppear {
             purgeExpiredDeletedItems()
             refreshBadgeStore()
@@ -311,54 +321,50 @@ struct DashboardContentView: View {
 
     var body: some View {
         GeometryReader { proxy in
-            ZStack {
-                ThemeGradientBackground(theme: theme)
+            ScrollView {
+                VStack(alignment: .leading, spacing: 24) {
+                    // Cabeçalho com saudação e navegador de semana
+                    HStack(alignment: .center) {
+                        GreetingHeaderView(name: "Fabíola")
+                        Spacer()
+                        WeekNavigatorView(selection: $selectedWeek)
+                    }
 
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 24) {
-                        // Cabeçalho com saudação e navegador de semana
-                        HStack(alignment: .center) {
-                            GreetingHeaderView(name: "Fabíola")
-                            Spacer()
-                            WeekNavigatorView(selection: $selectedWeek)
+                    HStack(alignment: .center, spacing: 16) {
+                        FilterTabsView(badgeStore: badgeStore, selection: $selectedTab)
+
+                        DashboardToolbarPrimaryButton(title: "Novo item", systemImage: "plus") {
+                            isNewItemPresented = true
                         }
 
-                        HStack(alignment: .center, spacing: 16) {
-                            FilterTabsView(badgeStore: badgeStore, selection: $selectedTab)
+                        Spacer(minLength: 16)
 
-                            DashboardToolbarPrimaryButton(title: "Novo item", systemImage: "plus") {
-                                isNewItemPresented = true
-                            }
-
-                            Spacer(minLength: 16)
-
-                            DashboardRefreshStatusView()
-                        }
-
-                        dashboardBoard
-
-                        FooterView(lastUpdated: "29 de julho, 14:30h")
-                            .padding(.top, 8)
+                        DashboardRefreshStatusView()
                     }
-                    .padding(24)
-                    .frame(
-                        maxWidth: .infinity,
-                        minHeight: max(0, proxy.size.height - 20),
-                        alignment: .topLeading
-                    )
-                    .background {
-                        UnevenRoundedRectangle(
-                            topLeadingRadius: 20,
-                            bottomLeadingRadius: 0,
-                            bottomTrailingRadius: 0,
-                            topTrailingRadius: 20,
-                            style: .continuous
-                        )
-                        .fill(Color.Token.backgroundPrimary)
-                    }
-                    .padding(.top, 20)
-                    .padding(.horizontal, 20)
+
+                    dashboardBoard
+
+                    FooterView(lastUpdated: "29 de julho, 14:30h")
+                        .padding(.top, 8)
                 }
+                .padding(24)
+                .frame(
+                    maxWidth: .infinity,
+                    minHeight: max(0, proxy.size.height - 20),
+                    alignment: .topLeading
+                )
+                .background {
+                    UnevenRoundedRectangle(
+                        topLeadingRadius: 20,
+                        bottomLeadingRadius: 0,
+                        bottomTrailingRadius: 0,
+                        topTrailingRadius: 20,
+                        style: .continuous
+                    )
+                    .fill(Color.Token.backgroundPrimary)
+                }
+                .padding(.top, 20)
+                .padding(.horizontal, 20)
             }
         }
         .navigationTitle("")
@@ -1525,21 +1531,6 @@ private struct MetadataRow: View {
             Text(text)
                 .font(.caption.weight(highlighted ? .semibold : .regular))
                 .foregroundStyle(highlighted ? Color.Token.statusAttention : Color.Token.textSecondary)
-        }
-    }
-}
-
-// MARK: - Rodapé
-
-struct FooterView: View {
-    let lastUpdated: String
-
-    var body: some View {
-        VStack {
-            Spacer()
-            Text("Última atualização em \(lastUpdated)")
-                .font(.caption)
-                .foregroundStyle(.secondary)
         }
     }
 }

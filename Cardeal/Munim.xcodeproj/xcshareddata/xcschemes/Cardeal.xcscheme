@@ -16,8 +16,8 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "384F6F9E301FC92D00EBF2B3"
-               BuildableName = "Cardeal.app"
-               BlueprintName = "Cardeal"
+               BuildableName = "Munim.app"
+               BlueprintName = "Munim"
                ReferencedContainer = "container:Munim.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
@@ -46,8 +46,8 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "384F6F9E301FC92D00EBF2B3"
-            BuildableName = "Cardeal.app"
-            BlueprintName = "Cardeal"
+            BuildableName = "Munim.app"
+            BlueprintName = "Munim"
             ReferencedContainer = "container:Munim.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
@@ -63,8 +63,8 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "384F6F9E301FC92D00EBF2B3"
-            BuildableName = "Cardeal.app"
-            BlueprintName = "Cardeal"
+            BuildableName = "Munim.app"
+            BlueprintName = "Munim"
             ReferencedContainer = "container:Munim.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>

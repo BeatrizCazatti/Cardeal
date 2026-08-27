@@ -97,6 +97,15 @@ enum AppTheme: String, CaseIterable, Identifiable {
         case .blueberry: Color(hex: 0x8DABF4)
         }
     }
+    
+    var calendar: Color {
+        switch self {
+        case .munim: Color(hex: 0x4973DF)
+        case .peach: Color(hex: 0xC25744)
+        case .plum: Color(hex: 0x523BB2)
+        case .blueberry: Color(hex: 0x4973DF)
+        }
+    }
 }
 
 private struct AppThemeKey: EnvironmentKey {

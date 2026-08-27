@@ -18,7 +18,7 @@ struct MunimApp: App {
             DashboardView()
                 .environment(\.appTheme, theme)
                 .tint(theme.accentColor)
-                .preferredColorScheme(appearance.colorScheme)
+//                .preferredColorScheme(appearance.colorScheme)
                 // Teto de Dynamic Type no accessibility2: garante que a escala
                 // do texto respeita preferência do usuário sem estourar layouts
                 // fixos (cards do board, cápsula do botão "Novo item", chips).
@@ -29,7 +29,7 @@ struct MunimApp: App {
             SettingsWindow()
                 .environment(\.appTheme, theme)
                 .tint(theme.accentColor)
-                .preferredColorScheme(appearance.colorScheme)
+//                .preferredColorScheme(appearance.colorScheme)
                 .dynamicTypeSize(.medium ... .accessibility2)
         }
         .windowResizability(.contentMinSize)
