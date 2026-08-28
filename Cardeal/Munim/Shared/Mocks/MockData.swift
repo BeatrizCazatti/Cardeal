@@ -84,6 +84,23 @@ enum MockData {
             folder: .meetingMinutes
         ),
         AttachmentItem(
+            name: "Encaminhamentos da reunião de Design",
+            owner: "Eduarda Vieira",
+            location: "Google Chat > grupo Design",
+            team: "Design",
+            type: .information,
+            folder: .meetingMinutes,
+            details: AttachmentDetails(
+                participants: "Eduarda Vieira, Aline e time de Design",
+                deadline: "08 de setembro, 2026",
+                modality: "Remoto",
+                project: "Identidade Visual",
+                source: "Design / Google Chat",
+                excerpt: "Aline enviará os últimos posts e o brandbook antes do início da implementação.",
+                notes: "Informação extraída da conversa da equipe e vinculada à ata da reunião."
+            )
+        ),
+        AttachmentItem(
             name: "Análise de conversão do produto",
             owner: "Eduarda Vieira",
             location: "Google Drive > Produto > Análises",
@@ -106,6 +123,23 @@ enum MockData {
             team: "Atendimento",
             type: .presentation,
             folder: .commercial
+        ),
+        AttachmentItem(
+            name: "Retorno do cliente sobre a proposta",
+            owner: "Leonardo Drummond",
+            location: "Google Chat > grupo Comercial",
+            team: "Atendimento",
+            type: .information,
+            folder: .commercial,
+            details: AttachmentDetails(
+                participants: "Leonardo Drummond e cliente",
+                deadline: "15 de agosto, 2026",
+                modality: "Online",
+                project: "Proposta comercial - Agosto",
+                source: "Comercial / Google Chat",
+                excerpt: "O cliente aprovou a proposta com a solicitação de incluir o cronograma de implantação.",
+                notes: "Informação registrada a partir da resposta recebida no canal comercial."
+            )
         )
     ]
 

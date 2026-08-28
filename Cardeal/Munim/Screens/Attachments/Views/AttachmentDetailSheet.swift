@@ -3,6 +3,13 @@ import SwiftUI
 /// Folha de leitura com os metadados e a origem de um arquivo selecionado.
 struct AttachmentDetailSheet: View {
     let attachment: AttachmentItem
+    let onUpdate: (AttachmentItem) -> Void
+    
+    init(attachment: AttachmentItem, onUpdate: @escaping (AttachmentItem) -> Void) {
+            self.attachment = attachment
+            self.onUpdate = onUpdate
+        }
+    
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
