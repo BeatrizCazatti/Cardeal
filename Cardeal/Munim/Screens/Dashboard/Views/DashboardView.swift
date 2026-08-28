@@ -1352,7 +1352,7 @@ struct BoardItemCardView: View {
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .topLeading)
         .fixedSize(horizontal: false, vertical: true)
-        .modifier(BoardItemCardAppearanceModifier(isAwaitingReview: item.isAwaitingReview))
+        .modifier(BoardItemCardModifier(isAwaitingReview: item.isAwaitingReview))
         .sheet(isPresented: $isEditing) {
             BoardItemEditorSheet(item: item) { draft in
                 updateItem(item.id, draft)
@@ -1412,30 +1412,71 @@ private struct UnreadCardActionsView: View {
     }
 }
 
-private struct BoardItemCardAppearanceModifier: ViewModifier {
+//private struct BoardItemCardAppearanceModifier: ViewModifier {
+//    let isAwaitingReview: Bool
+//    @Environment(\.appTheme) private var theme
+//
+//    func body(content: Content) -> some View {
+//        if isAwaitingReview {
+//            content
+//                .background(
+//                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+//                        .fill(theme.newCardFillColor)
+//                )
+//                .overlay(
+//                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+//                        .stroke(
+//                            theme.newCardStrokeColor,
+//                            style: StrokeStyle(lineWidth: 2, dash: [5, 6])
+//                        )
+//                )
+////                .shadow(color: .black.opacity(0.06), radius: 4, y: 2)
+//        } else {
+//            content.modifier(GlassCardModifier())
+//        }
+//    }
+//}
+
+struct BoardItemCardModifier: ViewModifier {
     let isAwaitingReview: Bool
     @Environment(\.appTheme) private var theme
 
     func body(content: Content) -> some View {
-        if isAwaitingReview {
-            content
-                .background(
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+        content
+            .background {
+                if isAwaitingReview {
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
                         .fill(theme.newCardFillColor)
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .stroke(
+                } else {
+                    // Fundo sólido semitransparente/branco padrão de cartões no HIG
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(Color(white: 1))
+                }
+            }
+            .overlay {
+                if isAwaitingReview {
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .strokeBorder(
                             theme.newCardStrokeColor,
-                            style: StrokeStyle(lineWidth: 2, dash: [5, 6])
+                            style: StrokeStyle(lineWidth: 1.5, dash: [5, 4])
                         )
-                )
-                .shadow(color: .black.opacity(0.06), radius: 4, y: 2)
-        } else {
-            content.modifier(GlassCardModifier())
-        }
+                }
+            }
+            .shadow(
+                color: Color.black.opacity(0.06),
+                radius: 3,
+                x: 0,
+                y: 2
+            )
     }
 }
+
+extension View {
+    func boardItemCardStyle(isAwaitingReview: Bool = false) -> some View {
+        self.modifier(BoardItemCardModifier(isAwaitingReview: isAwaitingReview))
+    }
+}
+
 
 private struct BoardItemEditorSheet: View {
     let item: BoardItem
@@ -1678,7 +1719,7 @@ struct GlassCardModifier: ViewModifier {
                     RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                         .strokeBorder(Color.primary.opacity(0.06))
                 )
-                .shadow(color: .black.opacity(0.06), radius: 6, y: 2)
+//                .shadow(color: .red.opacity(0.06), radius: 6, y: 2)
         }
     }
 }

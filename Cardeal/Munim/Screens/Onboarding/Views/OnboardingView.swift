@@ -59,7 +59,6 @@ struct OnboardingView: View {
                 actionButton
             }
             .padding(.top, currentStep == .welcome ? 120 : 72)
-            .padding(.bottom, 80)
             .padding(.leading, 80)
             .padding(.trailing, 40)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
@@ -69,8 +68,7 @@ struct OnboardingView: View {
                 Image("OnboardingTest")
                     .resizable()
                     .scaledToFill()
-                    .frame(width: geometry.size.width, height: geometry.size.height, alignment: .topLeading)
-                    .clipped()
+                    .frame(height: geometry.size.height)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
