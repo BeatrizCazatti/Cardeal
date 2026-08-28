@@ -1006,7 +1006,7 @@ struct NewBoardItemSheet: View {
                 }
                 .formStyle(.grouped)
             }
-            .frame(maxHeight: 460)
+            .frame(maxHeight: 500)
 
             HStack {
                 Spacer()

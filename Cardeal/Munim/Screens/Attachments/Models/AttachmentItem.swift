@@ -2,7 +2,7 @@ import Foundation
 
 /// Representa um arquivo encontrado nas fontes conectadas ao workspace.
 struct AttachmentItem: Identifiable, Hashable {
-    let id = UUID()
+    let id: UUID
     let name: String
     let owner: String
     let location: String
@@ -12,6 +12,7 @@ struct AttachmentItem: Identifiable, Hashable {
     let details: AttachmentDetails
 
     init(
+        id: UUID = UUID(),
         name: String,
         owner: String,
         location: String,
@@ -20,6 +21,7 @@ struct AttachmentItem: Identifiable, Hashable {
         folder: AttachmentFolder,
         details: AttachmentDetails? = nil
     ) {
+        self.id = id
         self.name = name
         self.owner = owner
         self.location = location
@@ -35,6 +37,11 @@ struct AttachmentItem: Identifiable, Hashable {
             excerpt: "Estamos oficialmente entrando na fase de implementação. A atualização seguirá o planejamento definido pela equipe.",
             notes: "As informações foram consolidadas a partir da conversa e dos documentos relacionados."
         )
+    }
+
+    /// Define como o item deve ser apresentado no navegador e qual detalhe abrir.
+    var contentKind: AttachmentContentKind {
+        type == .information ? .information : .file
     }
 }
 
@@ -88,8 +95,22 @@ enum AttachmentType: String, CaseIterable, Identifiable {
     case document = "Documento"
     case spreadsheet = "Planilha"
     case presentation = "Apresentação"
+    case information = "Informações"
 
     var id: Self { self }
+}
+
+/// Diferencia documentos de informações extraídas das fontes conectadas.
+enum AttachmentContentKind: Hashable {
+    case file
+    case information
+
+    var systemImage: String {
+        switch self {
+        case .file: "doc.fill"
+        case .information: "message.fill"
+        }
+    }
 }
 
 enum AttachmentResultScope: String, CaseIterable, Identifiable {

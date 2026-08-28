@@ -33,7 +33,7 @@ struct AttachmentsView: View {
     @State private var sortOption: SortOption = .newest
     @State private var folderPresentation: FolderPresentation = .icons
 
-    private let attachments = MockData.attachments
+    @State private var attachments = MockData.attachments
 
     private var filteredAttachments: [AttachmentItem] {
         let matchingAttachments = attachments.filter { attachment in
@@ -91,7 +91,21 @@ struct AttachmentsView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color.Token.backgroundPrimary)
         .sheet(item: $selectedAttachment) { attachment in
-            AttachmentDetailSheet(attachment: attachment)
+            switch attachment.contentKind {
+            case .file:
+                InformationDetailSheet(information: InformationItem(
+                    name: attachment.name,
+                    details: InformationDetails(
+                        owner: attachment.owner,
+                        creationDate: attachment.details.deadline, // Ou o campo de data correspondente no seu model
+                        link: attachment.details.source
+                    )
+                ))
+            case .information:
+                AttachmentDetailSheet(attachment: attachment, onUpdate: { updatedAttachment in
+                    update(updatedAttachment)
+                })
+            }
         }
     }
 
@@ -113,6 +127,12 @@ struct AttachmentsView: View {
         selectedType = nil
         selectedPerson = nil
         selectedTeam = nil
+    }
+
+    private func update(_ attachment: AttachmentItem) {
+        guard let index = attachments.firstIndex(where: { $0.id == attachment.id }) else { return }
+        attachments[index] = attachment
+        selectedAttachment = attachment
     }
 }
 
@@ -500,7 +520,7 @@ private struct AttachmentColumnHeader: View {
         HStack(spacing: 20) {
             Text("Nome").frame(maxWidth: .infinity, alignment: .leading)
             Text("Dono").frame(width: 210, alignment: .leading)
-            Text("Localização do arquivo").frame(width: 280, alignment: .leading)
+            Text("Localização").frame(width: 280, alignment: .leading)
         }
         .font(.subheadline)
         .foregroundStyle(.secondary)
@@ -517,7 +537,7 @@ private struct AttachmentRow: View {
     var body: some View {
         Button(action: action) {
             HStack(spacing: 20) {
-                Label(attachment.name, systemImage: "doc.fill")
+                Label(attachment.name, systemImage: attachment.contentKind.systemImage)
                     .labelStyle(AttachmentNameLabelStyle())
                     .frame(maxWidth: .infinity, alignment: .leading)
                 Text(attachment.owner).frame(width: 210, alignment: .leading)
