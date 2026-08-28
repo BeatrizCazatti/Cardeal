@@ -18,7 +18,7 @@ struct MunimApp: App {
             AppFlowView()
                 .environment(\.appTheme, theme)
                 .tint(theme.accentColor)
-                .preferredColorScheme(appearance.colorScheme)
+//                .preferredColorScheme(appearance.colorScheme)
                 // A base `large` melhora a legibilidade sem alterar a
                 // hierarquia semântica dos estilos. Preferências maiores do
                 // usuário continuam válidas até accessibility2.
@@ -80,7 +80,7 @@ private struct AppFlowView: View {
             case .dashboard:
                 DashboardView()
                 .onAppear {
-                    resizeWindow(to: CGSize(width: 1280, height: 800))
+                    resizeWindow(to: CGSize(width: 1300, height: 800))
                 }
             }
         }

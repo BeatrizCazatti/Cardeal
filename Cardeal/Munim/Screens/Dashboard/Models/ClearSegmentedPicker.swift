@@ -18,7 +18,6 @@ struct TextWidthPreferenceKey: PreferenceKey {
 // MARK: - ClearSegmentedPicker
 public struct ClearSegmentedPicker: View {
     public let tabs: [String]
-//    public let icons: [String]?
     public let colors: [Color]?
     public let badges: [Int]?
     public let selectedTextColor: Color
@@ -37,7 +36,6 @@ public struct ClearSegmentedPicker: View {
 
     public init(
         tabs: [String],
-//        icons: [String]? = nil,
         colors: [Color]? = nil,
         badges: [Int]? = nil,
         selectedTextColor: Color = .white,
@@ -57,10 +55,13 @@ public struct ClearSegmentedPicker: View {
             // LAYER 0: Indicador Glassmorphism
             indicatorView
 
-            // LAYER 1: Textos e Ícones
+            // LAYER 1: Textos e Botões (sem badges embutidos)
             labelsHStack
 
-            // LAYER 2: Overlay de Drag
+            // LAYER 2: Badges Vazados Flutuantes (No topo de tudo)
+            badgesOverlayLayer
+
+            // LAYER 3: Overlay de Drag
             dragOverlayView
         }
         .sensoryFeedback(.selection, trigger: feedbackTrigger)
@@ -96,8 +97,6 @@ public struct ClearSegmentedPicker: View {
                         lineWidth: 1
                     )
             )
-            // Materiais já comunicam profundidade. No modo claro, uma sombra
-            // curta e pouco opaca evita o halo escuro e mantém o contraste.
             .shadow(
                 color: indicatorShadowColor,
                 radius: indicatorShadowRadius,
@@ -132,13 +131,6 @@ public struct ClearSegmentedPicker: View {
                     .foregroundColor(currentTab == index ? selectedTextColor : unselectedTextColor)
                     .padding(.horizontal, horizontalPadding)
                     .padding(.vertical, verticalPadding)
-                    .overlay(alignment: .topTrailing) {
-                        if let count = badges?[safe: index], count > 0 {
-                            ClearSegmentBadge(count: count)
-                                .offset(x: 9, y: -9)
-                                .allowsHitTesting(false)
-                        }
-                    }
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
@@ -151,6 +143,22 @@ public struct ClearSegmentedPicker: View {
                 )
                 .accessibilityValue(accessibilityValue(for: index))
                 .accessibilityAddTraits(currentTab == index ? .isSelected : [])
+            }
+        }
+        .padding(.trailing, 10)
+    }
+
+    // Camada dedicada que posiciona os badges livremente por cima de todo o container
+    @ViewBuilder
+    private var badgesOverlayLayer: some View {
+        ZStack(alignment: .leading) {
+            ForEach(tabs.indices, id: \.self) { index in
+                if let count = badges?[safe: index], count > 0 {
+                    let badgeOffset = badgeXOffset(for: index)
+                    ClearSegmentBadge(count: count)
+                        .offset(x: badgeOffset, y: -12) // 'y: -12' deixa ele bem vazado para fora do topo
+                        .allowsHitTesting(false)
+                }
             }
         }
     }
@@ -189,14 +197,34 @@ public struct ClearSegmentedPicker: View {
             )
     }
 
-    // MARK: - Lógica
+    // MARK: - Cálculos de Posição
+
+    private func badgeXOffset(for index: Int) -> CGFloat {
+        var accumulatedWidth: CGFloat = 0
+        for i in 0..<index {
+            accumulatedWidth += tabWidths[i] ?? 0
+        }
+        let currentTabWidth = tabWidths[index] ?? 0
+        // Posiciona o badge exatamente no canto superior direito do item correspondente
+        return accumulatedWidth + currentTabWidth - 20
+    }
+
+    private var maxIndicatorOffset: CGFloat {
+        guard !tabs.isEmpty else { return 0 }
+        var maxOffset: CGFloat = 0
+        for i in 0..<(tabs.count - 1) {
+            maxOffset += tabWidths[i] ?? 0
+        }
+        return maxOffset
+    }
 
     private var currentIndicatorOffset: CGFloat {
-        var offset: CGFloat = 0
+        var baseOffset: CGFloat = 0
         for i in 0..<currentTab {
-            offset += tabWidths[i] ?? 0
+            baseOffset += tabWidths[i] ?? 0
         }
-        return offset + dragOffset
+        let rawOffset = baseOffset + dragOffset
+        return min(max(rawOffset, 0), maxIndicatorOffset)
     }
 
     private func snapToNearestTab(dragDistance: CGFloat) {
