@@ -14,6 +14,8 @@ struct LoadingView: View {
     let onComplete: () -> Void
     @State private var isAnimating: Bool = false
     @State private var progress: CGFloat = 0.0
+    @ScaledMetric(relativeTo: .title2) private var titleSize: CGFloat = 24
+    @ScaledMetric(relativeTo: .body) private var bodySize: CGFloat = 16
 
     init(onComplete: @escaping () -> Void = {}) {
         self.onComplete = onComplete
@@ -81,12 +83,12 @@ struct LoadingView: View {
             // Textos Informativos
             VStack(spacing: 12) {
                 Text("Iniciando sincronização dos dados do Workspace")
-                    .font(.system(size: 24, weight: .bold))
+                    .font(.system(size: titleSize, weight: .bold))
                     .foregroundColor(primaryBlue)
                     .multilineTextAlignment(.center)
                 
                 Text("Aguarde alguns instantes enquanto Munim organiza\nsua memória organizacional...")
-                    .font(.system(size: 16, weight: .regular))
+                    .font(.system(size: bodySize, weight: .regular))
                     .foregroundColor(lightBlue)
                     .multilineTextAlignment(.center)
                     .lineSpacing(3)

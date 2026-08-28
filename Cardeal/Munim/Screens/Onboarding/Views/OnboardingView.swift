@@ -9,6 +9,13 @@ enum OnboardingStep {
 struct OnboardingView: View {
     let onFinish: () -> Void
     @State private var currentStep: OnboardingStep = .welcome
+    @ScaledMetric(relativeTo: .title) private var welcomeTitleSize: CGFloat = 28
+    @ScaledMetric(relativeTo: .largeTitle) private var brandTitleSize: CGFloat = 64
+    @ScaledMetric(relativeTo: .title3) private var bodyTitleSize: CGFloat = 20
+    @ScaledMetric(relativeTo: .title2) private var explanationTitleSize: CGFloat = 30
+    @ScaledMetric(relativeTo: .title2) private var permissionsTitleSize: CGFloat = 24
+    @ScaledMetric(relativeTo: .body) private var supportingTextSize: CGFloat = 15
+    @ScaledMetric(relativeTo: .body) private var buttonTextSize: CGFloat = 16
 
     init(onFinish: @escaping () -> Void = {}) {
         self.onFinish = onFinish
@@ -78,16 +85,16 @@ struct OnboardingView: View {
     private var welcomeView: some View {
         VStack(alignment: .leading, spacing: 0) {
             Text("Bem-vindo ao")
-                .font(.system(size: 28, weight: .regular))
+                .font(.system(size: welcomeTitleSize, weight: .regular))
                 .foregroundColor(primaryBlue)
             
             Text("munim")
-                .font(.system(size: 64, weight: .bold, design: .rounded))
+                .font(.system(size: brandTitleSize, weight: .bold, design: .rounded))
                 .foregroundColor(primaryBlue)
                 .padding(.bottom, 24)
             
             Text("A memória organizacional que reúne o conhecimento que sua equipe já compartilha todo dia em um só lugar.")
-                .font(.system(size: 20, weight: .regular))
+                .font(.system(size: bodyTitleSize, weight: .regular))
                 .foregroundColor(primaryBlue)
                 .lineSpacing(4)
                 .frame(maxWidth: 380, alignment: .leading)
@@ -97,13 +104,13 @@ struct OnboardingView: View {
     private var explanationView: some View {
         VStack(alignment: .leading, spacing: 24) {
             Text("Munim funciona recebendo o que sua empresa já compartilha")
-                .font(.system(size: 30, weight: .bold))
+                .font(.system(size: explanationTitleSize, weight: .bold))
                 .foregroundColor(primaryBlue)
                 .lineSpacing(4)
                 .frame(maxWidth: 420, alignment: .leading)
             
             Text("Traduzimos conversas e dados brutos em um repositório organizacional, integrando o Google Workspace ao Munim.")
-                .font(.system(size: 20, weight: .regular))
+                .font(.system(size: bodyTitleSize, weight: .regular))
                 .foregroundColor(lightBlue)
                 .lineSpacing(4)
                 .frame(maxWidth: 400, alignment: .leading)
@@ -113,13 +120,13 @@ struct OnboardingView: View {
     private var permissionsView: some View {
         VStack(alignment: .leading, spacing: 20) {
             Text("Para começar, forneça as permissões com a conta de **Administrador** do seu **Google Workspace**")
-                .font(.system(size: 24, weight: .regular))
+                .font(.system(size: permissionsTitleSize, weight: .regular))
                 .foregroundColor(primaryBlue)
                 .lineSpacing(4)
                 .frame(maxWidth: 440, alignment: .leading)
             
             Text("É assim que conseguimos montar o mapa da equipe sem que ninguém precise digitar nada.")
-                .font(.system(size: 15, weight: .regular))
+                .font(.system(size: supportingTextSize, weight: .regular))
                 .foregroundColor(lightBlue)
                 .lineSpacing(3)
                 .frame(maxWidth: 380, alignment: .leading)
@@ -140,7 +147,7 @@ struct OnboardingView: View {
             }
         }) {
             Text(buttonTitle)
-                .font(.system(size: 16, weight: .semibold))
+                .font(.system(size: buttonTextSize, weight: .semibold))
                 .foregroundColor(.white)
                 .padding(.horizontal, currentStep == .permissions ? 28 : 36)
                 .padding(.vertical, 14)

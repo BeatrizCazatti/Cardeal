@@ -1487,7 +1487,7 @@ private struct BoardItemEditorSheet: View {
                 }
                 .formStyle(.grouped)
             }
-            .frame(maxHeight: 390)
+            .frame(maxHeight: 400)
 
             HStack {
                 Spacer()

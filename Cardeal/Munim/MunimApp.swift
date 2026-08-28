@@ -19,10 +19,10 @@ struct MunimApp: App {
                 .environment(\.appTheme, theme)
                 .tint(theme.accentColor)
                 .preferredColorScheme(appearance.colorScheme)
-                // Teto de Dynamic Type no accessibility2: garante que a escala
-                // do texto respeita preferência do usuário sem estourar layouts
-                // fixos (cards do board, cápsula do botão "Novo item", chips).
-                .dynamicTypeSize(.medium ... .accessibility2)
+                // A base `large` melhora a legibilidade sem alterar a
+                // hierarquia semântica dos estilos. Preferências maiores do
+                // usuário continuam válidas até accessibility2.
+                .dynamicTypeSize(.large ... .accessibility2)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
 
@@ -31,7 +31,7 @@ struct MunimApp: App {
                 .environment(\.appTheme, theme)
                 .tint(theme.accentColor)
 //                .preferredColorScheme(appearance.colorScheme)
-                .dynamicTypeSize(.medium ... .accessibility2)
+                .dynamicTypeSize(.large ... .accessibility2)
         }
         .windowResizability(.contentMinSize)
         .commands {
