@@ -79,8 +79,22 @@ private struct AppFlowView: View {
                 }
             case .dashboard:
                 DashboardView()
+                .onAppear {
+                    resizeWindow(to: CGSize(width: 1280, height: 800))
+                }
             }
         }
         .animation(.easeInOut(duration: 0.25), value: screen)
     }
+    private func resizeWindow(to size: CGSize) {
+            guard let window = NSApplication.shared.windows.first else { return }
+            var newFrame = window.frame
+            let originX = newFrame.origin.x - (size.width - newFrame.width) / 2
+            let originY = newFrame.origin.y - (size.height - newFrame.height) / 2
+            
+            newFrame.origin = CGPoint(x: originX, y: originY)
+            newFrame.size = size
+            
+            window.setFrame(newFrame, display: true, animate: true)
+        }
 }
