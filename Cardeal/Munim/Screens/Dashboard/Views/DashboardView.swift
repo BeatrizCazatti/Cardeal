@@ -330,7 +330,7 @@ struct DashboardContentView: View {
                         WeekNavigatorView(selection: $selectedWeek)
                     }
 
-                    HStack(alignment: .center, spacing: 16) {
+                    HStack(alignment: .center, spacing: 12) {
                         FilterTabsView(badgeStore: badgeStore, selection: $selectedTab)
 
                         DashboardToolbarPrimaryButton(title: "Novo item", systemImage: "plus") {
@@ -917,29 +917,32 @@ private struct DashboardRefreshStatusView: View {
     }
 }
 
-struct DashboardToolbarPrimaryButton: View {
+private struct DashboardToolbarPrimaryButton: View {
     let title: String
     let systemImage: String
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
-            ZStack {
-                HStack(spacing: 10) {
-                    Image(systemName: systemImage)
-                        .font(.title2.weight(.regular))
-                    Text(title)
-                        .font(.title3.weight(.regular))
-                }
+            HStack(spacing: 8) {
+                Image(systemName: systemImage)
+                    .font(.body.weight(.semibold))
+
+                Text(title)
+                    .font(.body.weight(.semibold))
+                    .lineLimit(1)
             }
             .foregroundStyle(Color.Token.textOnAccent)
-            .frame(height: 48)
-            .padding(.horizontal, 28)
+            .frame(minWidth: 136, minHeight: 44)
+            .padding(.horizontal, 16)
             .background(Capsule().fill(Color.Token.interactiveAccent))
             .contentShape(Capsule())
         }
         .buttonStyle(.plain)
-        .shadow(color: Color.Token.interactiveAccent.opacity(0.22), radius: 10, y: 4)
+        .fixedSize(horizontal: true, vertical: false)
+        .layoutPriority(1)
+        .shadow(color: Color.Token.interactiveAccent.opacity(0.16), radius: 4, y: 2)
+        .accessibilityLabel(title)
     }
 }
 
@@ -1276,7 +1279,6 @@ struct BoardItemCardView: View {
     let updateItem: (BoardItem.ID, BoardItemDraft) -> Void
     let archiveItem: (BoardItem.ID) -> Void
     let requestDeletion: (BoardItem) -> Void
-    @State private var isHovering = false
     @State private var isEditing = false
 
     /// Cards pendentes de revisão sempre usam uma superfície clara, inclusive
@@ -1291,53 +1293,19 @@ struct BoardItemCardView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            BoardItemPriorityTag(priority: item.priority)
+            HStack(alignment: .top) {
+                BoardItemPriorityTag(priority: item.priority)
 
-            if item.isAwaitingReview {
-                HStack(alignment: .top) {
-                    Text(item.title)
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(titleColor)
-                        .lineLimit(2)
-                        .minimumScaleFactor(0.85)
+                Spacer(minLength: 8)
 
-                    Spacer(minLength: 8)
-
-                    UnreadCardActionsView {
-                        isEditing = true
-                    } markAsReviewed: {
-                        markAsReviewed(item.id)
-                    }
-                }
-            } else {
-                HStack(alignment: .top) {
-                    Text(item.title)
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(titleColor)
-                        .lineLimit(2)
-                        .minimumScaleFactor(0.85)
-
-                    Spacer(minLength: 8)
-
-                    Menu {
-                        Button("Editar", systemImage: "pencil") {
-                            isEditing = true
-                        }
-                        Button("Arquivar", systemImage: "archivebox") {
-                            archiveItem(item.id)
-                        }
-                        Button("Excluir", systemImage: "trash", role: .destructive) {
-                            requestDeletion(item)
-                        }
-                    } label: {
-                        Image(systemName: "ellipsis")
-                            .foregroundStyle(.secondary)
-                            .rotationEffect(.degrees(90))
-                    }
-                    .menuStyle(.borderlessButton)
-                    .fixedSize()
-                }
+                cardActions
             }
+
+            Text(item.title)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(titleColor)
+                .lineLimit(2)
+                .minimumScaleFactor(0.85)
 
             if let description = item.descriptionText {
                 Text(description)
@@ -1385,14 +1353,40 @@ struct BoardItemCardView: View {
         .frame(maxWidth: .infinity, alignment: .topLeading)
         .fixedSize(horizontal: false, vertical: true)
         .modifier(BoardItemCardAppearanceModifier(isAwaitingReview: item.isAwaitingReview))
-        .onHover { hovering in
-            withAnimation(.easeInOut(duration: 0.15)) { isHovering = hovering }
-        }
-        .scaleEffect(isHovering ? 1.01 : 1.0)
         .sheet(isPresented: $isEditing) {
             BoardItemEditorSheet(item: item) { draft in
                 updateItem(item.id, draft)
             }
+        }
+    }
+
+    @ViewBuilder
+    private var cardActions: some View {
+        if item.isAwaitingReview {
+            UnreadCardActionsView {
+                isEditing = true
+            } markAsReviewed: {
+                markAsReviewed(item.id)
+            }
+        } else {
+            Menu {
+                Button("Editar", systemImage: "pencil") {
+                    isEditing = true
+                }
+                Button("Arquivar", systemImage: "archivebox") {
+                    archiveItem(item.id)
+                }
+                Button("Excluir", systemImage: "trash", role: .destructive) {
+                    requestDeletion(item)
+                }
+            } label: {
+                Image(systemName: "ellipsis")
+                    .foregroundStyle(.secondary)
+                    .rotationEffect(.degrees(90))
+                    .frame(width: 28, height: 28)
+            }
+            .menuStyle(.borderlessButton)
+            .fixedSize()
         }
     }
 }
@@ -1436,7 +1430,7 @@ private struct BoardItemCardAppearanceModifier: ViewModifier {
                             style: StrokeStyle(lineWidth: 2, dash: [5, 6])
                         )
                 )
-                .shadow(color: .black.opacity(0.08), radius: 8, y: 3)
+                .shadow(color: .black.opacity(0.06), radius: 4, y: 2)
         } else {
             content.modifier(GlassCardModifier())
         }

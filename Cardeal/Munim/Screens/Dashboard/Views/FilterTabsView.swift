@@ -33,10 +33,9 @@ struct FilterTabsView: View {
             }
         }
         .frame(minHeight: 58, alignment: .bottomLeading)
-        // A área de layout pode crescer para acomodar a responsividade, mas a
-        // cápsula branca continua limitada à largura natural das tabs.
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .layoutPriority(1)
+        // Mantém a largura natural das abas para não comprimir os controles
+        // que as acompanham na barra do dashboard.
+        .layoutPriority(0)
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Filtros do dashboard")
     }
