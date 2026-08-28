@@ -18,11 +18,11 @@ struct MunimApp: App {
             AppFlowView()
                 .environment(\.appTheme, theme)
                 .tint(theme.accentColor)
-                .preferredColorScheme(appearance.colorScheme)
-                // Teto de Dynamic Type no accessibility2: garante que a escala
-                // do texto respeita preferência do usuário sem estourar layouts
-                // fixos (cards do board, cápsula do botão "Novo item", chips).
-                .dynamicTypeSize(.medium ... .accessibility2)
+//                .preferredColorScheme(appearance.colorScheme)
+                // A base `large` melhora a legibilidade sem alterar a
+                // hierarquia semântica dos estilos. Preferências maiores do
+                // usuário continuam válidas até accessibility2.
+                .dynamicTypeSize(.large ... .accessibility2)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
 
@@ -31,7 +31,7 @@ struct MunimApp: App {
                 .environment(\.appTheme, theme)
                 .tint(theme.accentColor)
 //                .preferredColorScheme(appearance.colorScheme)
-                .dynamicTypeSize(.medium ... .accessibility2)
+                .dynamicTypeSize(.large ... .accessibility2)
         }
         .windowResizability(.contentMinSize)
         .commands {
@@ -58,7 +58,9 @@ private struct AppFlowView: View {
         case dashboard
     }
 
-    @State private var screen: Screen = .onboarding
+//    @State private var screen: Screen = .onboarding
+    @State private var screen: Screen = .dashboard
+
 
     var body: some View {
         Group {
@@ -77,8 +79,22 @@ private struct AppFlowView: View {
                 }
             case .dashboard:
                 DashboardView()
+                .onAppear {
+                    resizeWindow(to: CGSize(width: 1300, height: 800))
+                }
             }
         }
         .animation(.easeInOut(duration: 0.25), value: screen)
     }
+    private func resizeWindow(to size: CGSize) {
+            guard let window = NSApplication.shared.windows.first else { return }
+            var newFrame = window.frame
+            let originX = newFrame.origin.x - (size.width - newFrame.width) / 2
+            let originY = newFrame.origin.y - (size.height - newFrame.height) / 2
+            
+            newFrame.origin = CGPoint(x: originX, y: originY)
+            newFrame.size = size
+            
+            window.setFrame(newFrame, display: true, animate: true)
+        }
 }

@@ -433,6 +433,7 @@ struct GreetingHeaderView: View {
 struct WeekNavigatorView: View {
     @Binding var selection: WeekRange
     @State private var showCalendar = false
+    @Environment(\.appTheme) private var theme
 
     private let calendar = Calendar.dashboard
 
@@ -442,6 +443,7 @@ struct WeekNavigatorView: View {
                 moveWeek(by: -1)
             } label: {
                 Image(systemName: "chevron.left")
+                    .foregroundStyle(theme.accentColor)
             }
             .buttonStyle(.plain)
 
@@ -450,6 +452,7 @@ struct WeekNavigatorView: View {
             } label: {
                 Text(selectedWeekText)
                 .font(.title3.weight(.medium))
+                .foregroundStyle(theme.accentColor)
             }
             .buttonStyle(.plain)
             .popover(isPresented: $showCalendar, arrowEdge: .top) {
@@ -460,6 +463,7 @@ struct WeekNavigatorView: View {
                 moveWeek(by: 1)
             } label: {
                 Image(systemName: "chevron.right")
+                    .foregroundStyle(theme.accentColor)
             }
             .buttonStyle(.plain)
         }
@@ -899,6 +903,8 @@ private struct DashboardToolbarIconButton: View {
 }
 
 private struct DashboardRefreshStatusView: View {
+    @Environment(\.appTheme) private var theme
+    
     var body: some View {
         VStack(alignment: .trailing, spacing: 4) {
             Button("Atualizar", systemImage: "arrow.clockwise") {
@@ -906,8 +912,9 @@ private struct DashboardRefreshStatusView: View {
             }
             .labelStyle(.titleOnly)
             .font(.caption.weight(.semibold))
+            .underline()
             .buttonStyle(.plain)
-            .foregroundStyle(Color.Token.interactiveAccent)
+            .foregroundStyle(theme.accentColor)
 
             Text("Última atualização em 29 de julho, 14:30h")
                 .font(.caption2)
@@ -921,6 +928,7 @@ private struct DashboardToolbarPrimaryButton: View {
     let title: String
     let systemImage: String
     let action: () -> Void
+    @Environment(\.appTheme) private var theme
 
     var body: some View {
         Button(action: action) {
@@ -935,7 +943,7 @@ private struct DashboardToolbarPrimaryButton: View {
             .foregroundStyle(Color.Token.textOnAccent)
             .frame(minWidth: 136, minHeight: 44)
             .padding(.horizontal, 16)
-            .background(Capsule().fill(Color.Token.interactiveAccent))
+            .background(Capsule().fill(theme.accentColor))
             .contentShape(Capsule())
         }
         .buttonStyle(.plain)
@@ -1352,7 +1360,7 @@ struct BoardItemCardView: View {
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .topLeading)
         .fixedSize(horizontal: false, vertical: true)
-        .modifier(BoardItemCardAppearanceModifier(isAwaitingReview: item.isAwaitingReview))
+        .modifier(BoardItemCardModifier(isAwaitingReview: item.isAwaitingReview))
         .sheet(isPresented: $isEditing) {
             BoardItemEditorSheet(item: item) { draft in
                 updateItem(item.id, draft)
@@ -1397,45 +1405,94 @@ private struct UnreadCardActionsView: View {
 
     var body: some View {
         HStack(spacing: 10) {
-            Button("Editar", systemImage: "pencil", action: edit)
-                .labelStyle(.iconOnly)
-                .foregroundStyle(Color.accentColor)
-                .frame(width: 44, height: 44)
-                .background(Color.Token.surfaceRaised, in: Circle())
-            Button("Marcar como revisado", systemImage: "checkmark", action: markAsReviewed)
-                .labelStyle(.iconOnly)
-                .foregroundStyle(Color.Token.textOnAccent)
-                .frame(width: 44, height: 44)
-                .background(Color.Token.statusSuccess, in: Circle())
+            Button(action: edit) {
+                Image(systemName: "pencil")
+                    .foregroundStyle(Color.accentColor)
+                    .frame(width: 44, height: 44)
+                    .background(Color.Token.surfaceRaised, in: Circle())
+                    .contentShape(Circle())
+            }
+            .accessibilityLabel("Editar")
+
+            Button(action: markAsReviewed) {
+                Image(systemName: "checkmark")
+                    .foregroundStyle(Color.Token.textOnAccent)
+                    .frame(width: 44, height: 44)
+                    .background(Color.Token.statusSuccess, in: Circle())
+                    .contentShape(Circle())
+            }
+            .accessibilityLabel("Marcar como revisado")
         }
         .buttonStyle(.plain)
     }
 }
 
-private struct BoardItemCardAppearanceModifier: ViewModifier {
+
+//private struct BoardItemCardAppearanceModifier: ViewModifier {
+//    let isAwaitingReview: Bool
+//    @Environment(\.appTheme) private var theme
+//
+//    func body(content: Content) -> some View {
+//        if isAwaitingReview {
+//            content
+//                .background(
+//                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+//                        .fill(theme.newCardFillColor)
+//                )
+//                .overlay(
+//                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+//                        .stroke(
+//                            theme.newCardStrokeColor,
+//                            style: StrokeStyle(lineWidth: 2, dash: [5, 6])
+//                        )
+//                )
+////                .shadow(color: .black.opacity(0.06), radius: 4, y: 2)
+//        } else {
+//            content.modifier(GlassCardModifier())
+//        }
+//    }
+//}
+
+struct BoardItemCardModifier: ViewModifier {
     let isAwaitingReview: Bool
     @Environment(\.appTheme) private var theme
 
     func body(content: Content) -> some View {
-        if isAwaitingReview {
-            content
-                .background(
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+        content
+            .background {
+                if isAwaitingReview {
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
                         .fill(theme.newCardFillColor)
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .stroke(
+                } else {
+                    // Fundo sólido semitransparente/branco padrão de cartões no HIG
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(Color(white: 1))
+                }
+            }
+            .overlay {
+                if isAwaitingReview {
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .strokeBorder(
                             theme.newCardStrokeColor,
-                            style: StrokeStyle(lineWidth: 2, dash: [5, 6])
+                            style: StrokeStyle(lineWidth: 1.5, dash: [5, 4])
                         )
-                )
-                .shadow(color: .black.opacity(0.06), radius: 4, y: 2)
-        } else {
-            content.modifier(GlassCardModifier())
-        }
+                }
+            }
+            .shadow(
+                color: Color.black.opacity(0.06),
+                radius: 3,
+                x: 0,
+                y: 2
+            )
     }
 }
+
+extension View {
+    func boardItemCardStyle(isAwaitingReview: Bool = false) -> some View {
+        self.modifier(BoardItemCardModifier(isAwaitingReview: isAwaitingReview))
+    }
+}
+
 
 private struct BoardItemEditorSheet: View {
     let item: BoardItem
@@ -1487,7 +1544,7 @@ private struct BoardItemEditorSheet: View {
                 }
                 .formStyle(.grouped)
             }
-            .frame(maxHeight: 390)
+            .frame(maxHeight: 400)
 
             HStack {
                 Spacer()
@@ -1678,7 +1735,7 @@ struct GlassCardModifier: ViewModifier {
                     RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                         .strokeBorder(Color.primary.opacity(0.06))
                 )
-                .shadow(color: .black.opacity(0.06), radius: 6, y: 2)
+//                .shadow(color: .red.opacity(0.06), radius: 6, y: 2)
         }
     }
 }

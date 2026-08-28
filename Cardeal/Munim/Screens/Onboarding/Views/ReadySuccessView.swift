@@ -4,6 +4,9 @@ struct ReadySuccessView: View {
     var onStartMunim: () -> Void = {}
     
     @State private var animateBubbles = false
+    @ScaledMetric(relativeTo: .title) private var titleSize: CGFloat = 32
+    @ScaledMetric(relativeTo: .body) private var bodySize: CGFloat = 18
+    @ScaledMetric(relativeTo: .body) private var buttonSize: CGFloat = 16
     
     // MARK: - Cores
     private enum Theme {
@@ -64,7 +67,7 @@ struct ReadySuccessView: View {
     
     private var headerSection: some View {
         Text("Sua memória organizacional\nestá pronta!")
-            .font(.system(size: 32, weight: .bold))
+            .font(.system(size: titleSize, weight: .bold))
             .foregroundColor(Theme.titleColor)
             .lineSpacing(6)
             .padding(.bottom, 36)
@@ -77,14 +80,14 @@ struct ReadySuccessView: View {
             
             Text("Você está pronto para começar!")
         }
-        .font(.system(size: 18, weight: .regular))
+        .font(.system(size: bodySize, weight: .regular))
         .foregroundColor(Theme.textColor)
     }
     
     private var actionButton: some View {
         Button(action: onStartMunim) {
             Text("Iniciar Munim")
-                .font(.system(size: 16, weight: .semibold))
+                .font(.system(size: buttonSize, weight: .semibold))
                 .foregroundColor(.white)
                 .padding(.horizontal, 36)
                 .padding(.vertical, 14)

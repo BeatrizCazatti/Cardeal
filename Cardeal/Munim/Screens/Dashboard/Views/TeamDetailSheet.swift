@@ -21,6 +21,19 @@ struct TeamDetailSheet: View {
     @State private var isPinnedListPresented = false
     @State private var timelineScrollTarget: TeamActivity.ID?
 
+    private var selectedIndex: Binding<Int> {
+        Binding(
+            get: {
+                Tab.allCases.firstIndex(of: selectedTab) ?? 0
+            },
+            set: { newIndex in
+                if Tab.allCases.indices.contains(newIndex) {
+                    select(Tab.allCases[newIndex])
+                }
+            }
+        )
+    }
+
     private var displayedPinnedActivity: TeamActivity? {
         guard pinnedActivityIDs.indices.contains(displayedPinnedIndex) else { return nil }
         let activityID = pinnedActivityIDs[displayedPinnedIndex]
@@ -40,7 +53,7 @@ struct TeamDetailSheet: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            VStack(spacing: 0) {
+            VStack(alignment: .leading, spacing: 0) {
                 HStack {
                     Text(team.name)
                         .font(.largeTitle.weight(.semibold))
@@ -56,11 +69,23 @@ struct TeamDetailSheet: View {
                 .padding(.top, 32)
                 .padding(.bottom, 22)
 
-                HStack {
-                    tabSelector
-
-                    Spacer()
+                ClearSegmentedPicker(
+                    tabs: Tab.allCases.map(\.rawValue),
+                    colors: [theme.accentColor, theme.accentColor],
+                    badges: nil,
+                    selectedTextColor: Color.Token.textPrimary,
+                    unselectedTextColor: Color.Token.textNavigation,
+                    currentTab: selectedIndex
+                )
+                .padding(.horizontal, 12)
+                .padding(.vertical, 4)
+                .background(Color.Token.surfaceRaised, in: Capsule(style: .continuous))
+                .overlay {
+                    Capsule(style: .continuous)
+                        .strokeBorder(Color.Token.borderSubtle.opacity(0.65), lineWidth: 1)
                 }
+                .padding(.top, 12)
+                .padding(.trailing, 12)
                 .padding(.horizontal, 36)
                 .padding(.bottom, 28)
             }
@@ -126,32 +151,6 @@ struct TeamDetailSheet: View {
         }
     }
 
-    private var tabSelector: some View {
-        HStack(spacing: 8) {
-            ForEach(Tab.allCases) { tab in
-                Button {
-                    select(tab)
-                } label: {
-                    Text(tab.rawValue)
-                        .foregroundStyle(selectedTab == tab ? Color.Token.textOnAccent : Color.Token.textNavigation)
-                        .font(.title3.weight(selectedTab == tab ? .semibold : .regular))
-                        .padding(.horizontal, 20)
-                        .frame(minHeight: 44)
-                        .contentShape(.capsule)
-                }
-                .buttonStyle(.plain)
-                .background {
-                    if selectedTab == tab {
-                        Capsule(style: .continuous)
-                            .fill(theme.accentColor)
-                    }
-                }
-                .accessibilityAddTraits(selectedTab == tab ? .isSelected : [])
-            }
-        }
-        .padding(.vertical, 4)
-    }
-
     private func select(_ tab: Tab) {
         guard tab != selectedTab else { return }
 
@@ -210,7 +209,6 @@ struct TeamDetailSheet: View {
             select(.timeline)
         }
 
-        // Limpar antes de reaplicar permite repetir o atalho para o mesmo item.
         timelineScrollTarget = nil
         DispatchQueue.main.async {
             timelineScrollTarget = activityID
@@ -286,15 +284,18 @@ private struct TeamTimelineRow: View {
 
     private var categoryColor: Color {
         switch activity.category {
-        case .decision: Color.Token.statusSuccess
-        case .task: Color.Token.interactiveAccent
-        case .meeting: Color.Token.statusWarning
+        case .decision: Color.categoryItemDecision
+        case .task: Color.categoryItemTask
+        case .meeting: Color.categoryItemMeeting
         }
     }
 
     var body: some View {
         HStack(alignment: .center, spacing: 24) {
-            VStack(alignment: .leading, spacing: 10) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(activity.category.rawValue)
+                    .font(.headline.weight(.semibold))
+                    .foregroundStyle(categoryColor)
                 Text(activity.date)
                     .font(.subheadline)
                     .foregroundStyle(theme.accentColor.opacity(0.72))
@@ -313,9 +314,6 @@ private struct TeamTimelineRow: View {
             .frame(minHeight: 146, alignment: .top)
 
             VStack(alignment: .leading, spacing: 12) {
-                Text(activity.category.rawValue)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(categoryColor)
                 Text(activity.title)
                     .font(.title3.weight(.semibold))
                 Text(activity.detail)
@@ -331,10 +329,6 @@ private struct TeamTimelineRow: View {
                         }
                     }
                     .accessibilityHidden(true)
-
-//                    Text(activity.participants.joined(separator: ", "))
-//                        .font(.subheadline.weight(.medium))
-//                        .foregroundStyle(.secondary)
                 }
             }
             .padding(.bottom, 28)
@@ -368,6 +362,7 @@ private struct TeamTimelineRow: View {
             RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .stroke((isHighlighted || isHovering) ? theme.accentColor.opacity(isHighlighted ? 0.45 : 0.24) : .clear, lineWidth: 1)
         }
+        .contentShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         .onHover { hovering in
             withAnimation(.easeInOut(duration: 0.16)) {
                 isHovering = hovering
@@ -658,9 +653,6 @@ private struct TeamMemberAvatar: View {
     }
 }
 
-/// Avatar compartilhado entre a timeline e a aba Pessoas. Quando fotos reais
-/// forem adicionadas ao catálogo de assets, este é o único ponto a trocar a
-/// representação de monograma pela imagem de perfil.
 private struct ProfileAvatar: View {
     let name: String
     var highlighted = false
