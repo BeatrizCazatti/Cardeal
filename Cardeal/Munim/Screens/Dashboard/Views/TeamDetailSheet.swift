@@ -286,15 +286,18 @@ private struct TeamTimelineRow: View {
 
     private var categoryColor: Color {
         switch activity.category {
-        case .decision: Color.Token.statusSuccess
-        case .task: Color.Token.interactiveAccent
-        case .meeting: Color.Token.statusWarning
+        case .decision: Color.categoryItemDecision
+        case .task: Color.categoryItemTask
+        case .meeting: Color.categoryItemMeeting
         }
     }
 
     var body: some View {
         HStack(alignment: .center, spacing: 24) {
-            VStack(alignment: .leading, spacing: 10) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(activity.category.rawValue)
+                    .font(.headline.weight(.semibold))
+                    .foregroundStyle(categoryColor)
                 Text(activity.date)
                     .font(.subheadline)
                     .foregroundStyle(theme.accentColor.opacity(0.72))
@@ -313,9 +316,6 @@ private struct TeamTimelineRow: View {
             .frame(minHeight: 146, alignment: .top)
 
             VStack(alignment: .leading, spacing: 12) {
-                Text(activity.category.rawValue)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(categoryColor)
                 Text(activity.title)
                     .font(.title3.weight(.semibold))
                 Text(activity.detail)
@@ -331,10 +331,6 @@ private struct TeamTimelineRow: View {
                         }
                     }
                     .accessibilityHidden(true)
-
-//                    Text(activity.participants.joined(separator: ", "))
-//                        .font(.subheadline.weight(.medium))
-//                        .foregroundStyle(.secondary)
                 }
             }
             .padding(.bottom, 28)
@@ -368,6 +364,8 @@ private struct TeamTimelineRow: View {
             RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .stroke((isHighlighted || isHovering) ? theme.accentColor.opacity(isHighlighted ? 0.45 : 0.24) : .clear, lineWidth: 1)
         }
+        // Define que toda a área do cartão (mesmo as partes vazias/transparentes) é interativa
+        .contentShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         .onHover { hovering in
             withAnimation(.easeInOut(duration: 0.16)) {
                 isHovering = hovering

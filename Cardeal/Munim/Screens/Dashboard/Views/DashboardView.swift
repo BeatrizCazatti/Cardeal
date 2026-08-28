@@ -906,6 +906,7 @@ private struct DashboardRefreshStatusView: View {
             }
             .labelStyle(.titleOnly)
             .font(.caption.weight(.semibold))
+            .underline()
             .buttonStyle(.plain)
             .foregroundStyle(Color.Token.interactiveAccent)
 
@@ -1397,20 +1398,28 @@ private struct UnreadCardActionsView: View {
 
     var body: some View {
         HStack(spacing: 10) {
-            Button("Editar", systemImage: "pencil", action: edit)
-                .labelStyle(.iconOnly)
-                .foregroundStyle(Color.accentColor)
-                .frame(width: 44, height: 44)
-                .background(Color.Token.surfaceRaised, in: Circle())
-            Button("Marcar como revisado", systemImage: "checkmark", action: markAsReviewed)
-                .labelStyle(.iconOnly)
-                .foregroundStyle(Color.Token.textOnAccent)
-                .frame(width: 44, height: 44)
-                .background(Color.Token.statusSuccess, in: Circle())
+            Button(action: edit) {
+                Image(systemName: "pencil")
+                    .foregroundStyle(Color.accentColor)
+                    .frame(width: 44, height: 44)
+                    .background(Color.Token.surfaceRaised, in: Circle())
+                    .contentShape(Circle())
+            }
+            .accessibilityLabel("Editar")
+
+            Button(action: markAsReviewed) {
+                Image(systemName: "checkmark")
+                    .foregroundStyle(Color.Token.textOnAccent)
+                    .frame(width: 44, height: 44)
+                    .background(Color.Token.statusSuccess, in: Circle())
+                    .contentShape(Circle())
+            }
+            .accessibilityLabel("Marcar como revisado")
         }
         .buttonStyle(.plain)
     }
 }
+
 
 //private struct BoardItemCardAppearanceModifier: ViewModifier {
 //    let isAwaitingReview: Bool
