@@ -62,6 +62,7 @@ struct DashboardView: View {
             }
             .navigationSplitViewStyle(.balanced)
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .onAppear {
             purgeExpiredDeletedItems()
             refreshBadgeStore()
@@ -362,6 +363,7 @@ struct DashboardContentView: View {
                 .padding(.top, 20)
                 .padding(.horizontal, 20)
             }
+            .scrollBounceBehavior(.basedOnSize, axes: .vertical)
         }
         .navigationTitle("")
         .toolbar {
@@ -981,6 +983,8 @@ struct NewBoardItemSheet: View {
                         }
                     }
 
+                    BoardItemPriorityPicker(selection: $draft.priority)
+
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Descrição")
                         TextEditor(text: $draft.description)
@@ -1009,7 +1013,7 @@ struct NewBoardItemSheet: View {
             }
         }
         .padding(24)
-        .frame(width: 460, height: 630)
+        .frame(width: 460, height: 670)
         .onAppear {
             selectedTeam = teamNames.first ?? ""
         }
@@ -1287,6 +1291,8 @@ struct BoardItemCardView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
+            BoardItemPriorityTag(priority: item.priority)
+
             if item.isAwaitingReview {
                 HStack(alignment: .top) {
                     Text(item.title)
@@ -1475,6 +1481,8 @@ private struct BoardItemEditorSheet: View {
                     }
                     TextField("Local", text: $draft.location)
 
+                    BoardItemPriorityPicker(selection: $draft.priority)
+
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Descrição")
                         TextEditor(text: $draft.description)
@@ -1505,7 +1513,7 @@ private struct BoardItemEditorSheet: View {
             }
         }
         .padding(24)
-        .frame(width: 460, height: 560)
+        .frame(width: 460, height: 600)
     }
 }
 
@@ -1528,6 +1536,56 @@ private func formattedDateAndTime(_ date: Date) -> String {
             .hour()
             .minute()
     )
+}
+
+private struct BoardItemPriorityPicker: View {
+    @Binding var selection: BoardItemPriority
+
+    var body: some View {
+        Picker("Prioridade", selection: $selection) {
+            ForEach(BoardItemPriority.allCases) { priority in
+                BoardItemPriorityTag(priority: priority)
+                    .tag(priority)
+            }
+        }
+    }
+}
+
+private struct BoardItemPriorityTag: View {
+    let priority: BoardItemPriority
+
+    private var accentColor: Color {
+        switch priority {
+        case .high: Color(hex: 0xEF626A)
+        case .medium: Color(hex: 0xF5A33B)
+        case .low: Color(hex: 0x4CACEF)
+        case .unset: .gray.opacity(0.65)
+        }
+    }
+
+    private var backgroundColor: Color {
+        switch priority {
+        case .high: Color(hex: 0xFDE2E4)
+        case .medium: Color(hex: 0xFFE5BB)
+        case .low: Color(hex: 0xD8EEFF)
+        case .unset: Color.gray.opacity(0.14)
+        }
+    }
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Circle()
+                .fill(accentColor)
+                .frame(width: 10, height: 10)
+
+            Text(priority.title)
+                .font(.caption.weight(.medium))
+                .foregroundStyle(.black.opacity(0.62))
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background(backgroundColor, in: Capsule(style: .continuous))
+    }
 }
 
 private struct MetadataRow: View {

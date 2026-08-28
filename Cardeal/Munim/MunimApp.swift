@@ -15,11 +15,7 @@ struct MunimApp: App {
 
     var body: some Scene {
         WindowGroup {
-//            ReadySuccessView()
-//                .frame(width: 960, height: 600)
-//                .environment(\.appTheme, theme)
-//                .tint(theme.accentColor)
-            DashboardView()
+            AppFlowView()
                 .environment(\.appTheme, theme)
                 .tint(theme.accentColor)
                 .preferredColorScheme(appearance.colorScheme)
@@ -27,6 +23,7 @@ struct MunimApp: App {
                 // do texto respeita preferência do usuário sem estourar layouts
                 // fixos (cards do board, cápsula do botão "Novo item", chips).
                 .dynamicTypeSize(.medium ... .accessibility2)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
 
         Window("Configurações", id: "settings") {
@@ -50,5 +47,38 @@ struct MunimApp: App {
                 .keyboardShortcut(",", modifiers: .command)
             }
         }
+    }
+}
+
+private struct AppFlowView: View {
+    private enum Screen: Equatable {
+        case onboarding
+        case loading
+        case ready
+        case dashboard
+    }
+
+    @State private var screen: Screen = .onboarding
+
+    var body: some View {
+        Group {
+            switch screen {
+            case .onboarding:
+                OnboardingView {
+                    screen = .loading
+                }
+            case .loading:
+                LoadingView {
+                    screen = .ready
+                }
+            case .ready:
+                ReadySuccessView {
+                    screen = .dashboard
+                }
+            case .dashboard:
+                DashboardView()
+            }
+        }
+        .animation(.easeInOut(duration: 0.25), value: screen)
     }
 }

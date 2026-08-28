@@ -118,6 +118,7 @@ enum MockData {
                     badgeCount: 1,
                     assignees: [Assignee(name: "Aline (Design)", isGroup: false)],
                     dateText: "Amanhã - 17h",
+                    priority: .medium,
                     category: .task
                 ),
                 BoardItem(
@@ -126,6 +127,7 @@ enum MockData {
                     assignees: [Assignee(name: "Fabíola Machado & Atendimento", isGroup: true)],
                     dateText: "Amanhã - 17h",
                     location: "Presencial",
+                    priority: .high,
                     category: .meeting
                 )
             ]
@@ -137,6 +139,7 @@ enum MockData {
                     title: "Criação de post para Instagram",
                     assignees: [Assignee(name: "Aline (Design)", isGroup: false)],
                     dateText: "Amanhã - 17h",
+                    priority: .low,
                     category: .meeting
                 ),
                 BoardItem(

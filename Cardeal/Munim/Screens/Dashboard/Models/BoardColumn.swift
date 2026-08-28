@@ -71,6 +71,7 @@ struct BoardItem: Identifiable, Hashable {
     var location: String?
     /// Usado por cards de "decisão", que mostram um parágrafo em vez de metadados.
     var descriptionText: String?
+    var priority: BoardItemPriority
     let category: DashboardItemCategory
 
     init(
@@ -81,6 +82,7 @@ struct BoardItem: Identifiable, Hashable {
         isRescheduled: Bool = false,
         location: String? = nil,
         descriptionText: String? = nil,
+        priority: BoardItemPriority = .unset,
         category: DashboardItemCategory
     ) {
         self.title = title
@@ -90,6 +92,7 @@ struct BoardItem: Identifiable, Hashable {
         self.isRescheduled = isRescheduled
         self.location = location
         self.descriptionText = descriptionText
+        self.priority = priority
         self.category = category
     }
 
@@ -101,6 +104,7 @@ struct BoardItem: Identifiable, Hashable {
             dateText: draft.dateText.emptyAsNil,
             location: draft.location.emptyAsNil,
             descriptionText: draft.description.emptyAsNil,
+            priority: draft.priority,
             category: category
         )
     }
@@ -119,6 +123,7 @@ struct BoardItem: Identifiable, Hashable {
         assignees = draft.assignees
         dateText = draft.dateText.emptyAsNil
         location = draft.location.emptyAsNil
+        priority = draft.priority
     }
 }
 
@@ -140,6 +145,7 @@ struct BoardItemDraft {
     var assignees: [Assignee]
     var dateText: String
     var location: String
+    var priority: BoardItemPriority
 
     init() {
         title = ""
@@ -147,6 +153,7 @@ struct BoardItemDraft {
         assignees = []
         dateText = ""
         location = ""
+        priority = .unset
     }
 
     init(item: BoardItem) {
@@ -155,6 +162,25 @@ struct BoardItemDraft {
         assignees = item.assignees
         dateText = item.dateText ?? ""
         location = item.location ?? ""
+        priority = item.priority
+    }
+}
+
+enum BoardItemPriority: String, CaseIterable, Identifiable, Hashable {
+    case high
+    case medium
+    case low
+    case unset
+
+    var id: Self { self }
+
+    var title: String {
+        switch self {
+        case .high: "Alta"
+        case .medium: "Média"
+        case .low: "Baixa"
+        case .unset: "Definir prioridade"
+        }
     }
 }
 
