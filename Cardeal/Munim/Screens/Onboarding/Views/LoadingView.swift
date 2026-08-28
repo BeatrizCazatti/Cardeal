@@ -11,8 +11,13 @@ struct BubbleParticle: Identifiable {
 }
 
 struct LoadingView: View {
+    let onComplete: () -> Void
     @State private var isAnimating: Bool = false
     @State private var progress: CGFloat = 0.0
+
+    init(onComplete: @escaping () -> Void = {}) {
+        self.onComplete = onComplete
+    }
     
     private let primaryBlue = Color(red: 0.25, green: 0.45, blue: 0.88)
     private let lightBlue = Color(red: 0.35, green: 0.55, blue: 0.90)
@@ -108,12 +113,18 @@ struct LoadingView: View {
             
             Spacer()
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .frame(width: 960, height: 600)
         .background(Color.white)
         .ignoresSafeArea()
         .onAppear {
             isAnimating = true
             progress = 1.0
+        }
+        .task {
+            try? await Task.sleep(nanoseconds: 4_000_000_000)
+
+            guard !Task.isCancelled else { return }
+            onComplete()
         }
     }
 }

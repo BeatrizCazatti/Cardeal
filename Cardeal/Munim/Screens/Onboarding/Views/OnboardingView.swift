@@ -7,7 +7,12 @@ enum OnboardingStep {
 }
 
 struct OnboardingView: View {
+    let onFinish: () -> Void
     @State private var currentStep: OnboardingStep = .welcome
+
+    init(onFinish: @escaping () -> Void = {}) {
+        self.onFinish = onFinish
+    }
     
     private let primaryBlue = Color(red: 0.25, green: 0.45, blue: 0.88)
     private let lightBlue = Color(red: 0.35, green: 0.55, blue: 0.90)
@@ -62,6 +67,7 @@ struct OnboardingView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
+        .frame(width: 960, height: 600)
         .background(Color.white)
         .ignoresSafeArea()
         .animation(.easeInOut(duration: 0.25), value: currentStep)
@@ -130,8 +136,7 @@ struct OnboardingView: View {
             case .explanation:
                 currentStep = .permissions
             case .permissions:
-                // Ação final: Iniciar fluxo de autenticação do Google Workspace
-                break
+                onFinish()
             }
         }) {
             Text(buttonTitle)
