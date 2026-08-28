@@ -9,7 +9,7 @@ enum AppTheme: String, CaseIterable, Identifiable {
     case blueberry
 
     static let storageKey = "appTheme"
-    static let defaultTheme: Self = .blueberry
+    static let defaultTheme: Self = .munim
 
     var id: String { rawValue }
 
