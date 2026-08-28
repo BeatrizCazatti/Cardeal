@@ -18,7 +18,7 @@ struct MunimApp: App {
             AppFlowView()
                 .environment(\.appTheme, theme)
                 .tint(theme.accentColor)
-                .preferredColorScheme(appearance.colorScheme)
+//                .preferredColorScheme(appearance.colorScheme)
                 // A base `large` melhora a legibilidade sem alterar a
                 // hierarquia semântica dos estilos. Preferências maiores do
                 // usuário continuam válidas até accessibility2.
