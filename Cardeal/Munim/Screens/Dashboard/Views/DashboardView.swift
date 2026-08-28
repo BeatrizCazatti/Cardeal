@@ -433,6 +433,7 @@ struct GreetingHeaderView: View {
 struct WeekNavigatorView: View {
     @Binding var selection: WeekRange
     @State private var showCalendar = false
+    @Environment(\.appTheme) private var theme
 
     private let calendar = Calendar.dashboard
 
@@ -442,6 +443,7 @@ struct WeekNavigatorView: View {
                 moveWeek(by: -1)
             } label: {
                 Image(systemName: "chevron.left")
+                    .foregroundStyle(theme.accentColor)
             }
             .buttonStyle(.plain)
 
@@ -450,6 +452,7 @@ struct WeekNavigatorView: View {
             } label: {
                 Text(selectedWeekText)
                 .font(.title3.weight(.medium))
+                .foregroundStyle(theme.accentColor)
             }
             .buttonStyle(.plain)
             .popover(isPresented: $showCalendar, arrowEdge: .top) {
@@ -460,6 +463,7 @@ struct WeekNavigatorView: View {
                 moveWeek(by: 1)
             } label: {
                 Image(systemName: "chevron.right")
+                    .foregroundStyle(theme.accentColor)
             }
             .buttonStyle(.plain)
         }
@@ -899,6 +903,8 @@ private struct DashboardToolbarIconButton: View {
 }
 
 private struct DashboardRefreshStatusView: View {
+    @Environment(\.appTheme) private var theme
+    
     var body: some View {
         VStack(alignment: .trailing, spacing: 4) {
             Button("Atualizar", systemImage: "arrow.clockwise") {
@@ -908,7 +914,7 @@ private struct DashboardRefreshStatusView: View {
             .font(.caption.weight(.semibold))
             .underline()
             .buttonStyle(.plain)
-            .foregroundStyle(Color.Token.interactiveAccent)
+            .foregroundStyle(theme.accentColor)
 
             Text("Última atualização em 29 de julho, 14:30h")
                 .font(.caption2)
@@ -922,6 +928,7 @@ private struct DashboardToolbarPrimaryButton: View {
     let title: String
     let systemImage: String
     let action: () -> Void
+    @Environment(\.appTheme) private var theme
 
     var body: some View {
         Button(action: action) {
@@ -936,7 +943,7 @@ private struct DashboardToolbarPrimaryButton: View {
             .foregroundStyle(Color.Token.textOnAccent)
             .frame(minWidth: 136, minHeight: 44)
             .padding(.horizontal, 16)
-            .background(Capsule().fill(Color.Token.interactiveAccent))
+            .background(Capsule().fill(theme.accentColor))
             .contentShape(Capsule())
         }
         .buttonStyle(.plain)
