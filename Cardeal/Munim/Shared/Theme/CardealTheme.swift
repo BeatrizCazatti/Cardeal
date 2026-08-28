@@ -97,6 +97,17 @@ enum AppTheme: String, CaseIterable, Identifiable {
         case .blueberry: Color(hex: 0x8DABF4)
         }
     }
+
+    /// Ícone de pasta usado no módulo de anexos.
+    var attachmentFolderImage: Image {
+        switch self {
+        case .munim: Image(.munimFolder)
+        case .peach: Image(.peachFolder)
+        case .plum: Image(.plumFolder)
+        case .blueberry: Image(.blueberryFolder)
+        }
+    }
+
     
     var calendar: Color {
         switch self {

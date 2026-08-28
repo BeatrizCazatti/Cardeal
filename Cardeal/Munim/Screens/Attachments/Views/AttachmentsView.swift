@@ -214,10 +214,7 @@ private struct AttachmentFolderTile: View {
     var body: some View {
         Button(action: action) {
             VStack(alignment: .center, spacing: 10) {
-                Image(.folderAttachments)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 92, height: 70)
+                AttachmentFolderIcon(width: 92, height: 70)
                 Text(folder.rawValue)
                     .font(.subheadline)
                     .foregroundStyle(.primary)
@@ -239,10 +236,7 @@ private struct AttachmentFolderListRow: View {
     var body: some View {
         Button(action: action) {
             HStack(spacing: 14) {
-                Image(.folderAttachments)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 42, height: 32)
+                AttachmentFolderIcon(width: 42, height: 32)
 
                 Text(folder.rawValue)
                     .font(.body.weight(.medium))
@@ -260,6 +254,21 @@ private struct AttachmentFolderListRow: View {
         }
         .buttonStyle(.plain)
         .accessibilityHint("Abre a pasta \(folder.rawValue)")
+    }
+}
+
+/// Exibe o ícone de pasta correspondente ao tema selecionado em todos os
+/// contextos do navegador de anexos.
+private struct AttachmentFolderIcon: View {
+    let width: CGFloat
+    let height: CGFloat
+    @Environment(\.appTheme) private var theme
+
+    var body: some View {
+        theme.attachmentFolderImage
+            .resizable()
+            .scaledToFit()
+            .frame(width: width, height: height)
     }
 }
 
@@ -330,9 +339,13 @@ private struct AttachmentFolderHeader: View {
             .buttonStyle(.plain)
             .foregroundStyle(.secondary)
 
-            Label(folder.rawValue, systemImage: "folder.fill")
-                .font(.title)
-                .foregroundStyle(.primary)
+            HStack(spacing: 10) {
+                AttachmentFolderIcon(width: 42, height: 32)
+
+                Text(folder.rawValue)
+                    .font(.title)
+                    .foregroundStyle(.primary)
+            }
 
             Spacer(minLength: 24)
         }

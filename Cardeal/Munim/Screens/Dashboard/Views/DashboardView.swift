@@ -1275,13 +1275,23 @@ struct BoardItemCardView: View {
     @State private var isHovering = false
     @State private var isEditing = false
 
+    /// Cards pendentes de revisão sempre usam uma superfície clara, inclusive
+    /// no Dark Mode. Por isso, não podem herdar os tokens adaptativos de texto.
+    private var titleColor: Color {
+        item.isAwaitingReview ? .black.opacity(0.88) : Color.Token.textPrimary
+    }
+
+    private var supportingTextColor: Color {
+        item.isAwaitingReview ? .black.opacity(0.64) : Color.Token.textSecondary
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             if item.isAwaitingReview {
                 HStack(alignment: .top) {
                     Text(item.title)
                         .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(Color.Token.textPrimary)
+                        .foregroundStyle(titleColor)
                         .lineLimit(2)
                         .minimumScaleFactor(0.85)
 
@@ -1297,7 +1307,7 @@ struct BoardItemCardView: View {
                 HStack(alignment: .top) {
                     Text(item.title)
                         .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(Color.Token.textPrimary)
+                        .foregroundStyle(titleColor)
                         .lineLimit(2)
                         .minimumScaleFactor(0.85)
 
@@ -1326,7 +1336,7 @@ struct BoardItemCardView: View {
             if let description = item.descriptionText {
                 Text(description)
                     .font(.caption)
-                    .foregroundStyle(Color.Token.textSecondary)
+                    .foregroundStyle(supportingTextColor)
                     .lineLimit(3)
                     .minimumScaleFactor(0.9)
 
@@ -1343,7 +1353,8 @@ struct BoardItemCardView: View {
             if let assignee = item.assignees.first {
                 MetadataRow(
                     systemImage: assignee.isGroup ? "person.2.fill" : "person.fill",
-                    text: item.assignees.count == 1 ? assignee.name : "\(assignee.name) +\(item.assignees.count - 1)"
+                    text: item.assignees.count == 1 ? assignee.name : "\(assignee.name) +\(item.assignees.count - 1)",
+                    textColor: supportingTextColor
                 )
             }
 
@@ -1351,12 +1362,17 @@ struct BoardItemCardView: View {
                 MetadataRow(
                     systemImage: "calendar",
                     text: item.isRescheduled ? "Nova data: \(dateText)" : dateText,
-                    highlighted: item.isRescheduled
+                    highlighted: item.isRescheduled && !item.isAwaitingReview,
+                    textColor: supportingTextColor
                 )
             }
 
             if let location = item.location {
-                MetadataRow(systemImage: "mappin.and.ellipse", text: location)
+                MetadataRow(
+                    systemImage: "mappin.and.ellipse",
+                    text: location,
+                    textColor: supportingTextColor
+                )
             }
         }
         .padding(16)
@@ -1518,6 +1534,7 @@ private struct MetadataRow: View {
     let systemImage: String
     let text: String
     var highlighted: Bool = false
+    var textColor: Color = Color.Token.textSecondary
 
     var body: some View {
         HStack(spacing: 6) {
@@ -1526,7 +1543,7 @@ private struct MetadataRow: View {
                 .foregroundStyle(Color.Token.iconAccent)
             Text(text)
                 .font(.caption.weight(highlighted ? .semibold : .regular))
-                .foregroundStyle(highlighted ? Color.Token.statusAttention : Color.Token.textSecondary)
+                .foregroundStyle(highlighted ? Color.Token.statusAttention : textColor)
         }
     }
 }

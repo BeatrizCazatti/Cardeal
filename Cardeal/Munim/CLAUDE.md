@@ -1,4 +1,4 @@
-# Muninn — Regras do Projeto
+# Munim — Regras do Projeto
 
 ## Stack
 - SwiftUI exclusivamente.
