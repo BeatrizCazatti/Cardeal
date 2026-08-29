@@ -1,3 +1,12 @@
+extension Calendar {
+    static var dashboard: Calendar {
+        var cal = Calendar(identifier: .gregorian)
+        cal.locale = Locale(identifier: "pt_BR")
+        cal.firstWeekday = 1
+        return cal
+    }
+}
+
 import SwiftUI
 
 /// Um intervalo inclusivo de datas usado pelo navegador de período do dashboard.
@@ -16,8 +25,24 @@ struct WeekRange: Equatable {
     init(start: Date, end: Date, calendar: Calendar = .dashboard) {
         let normalizedStart = calendar.startOfDay(for: start)
         let normalizedEnd = calendar.startOfDay(for: end)
-        self.start = min(normalizedStart, normalizedEnd)
-        self.end = max(normalizedStart, normalizedEnd)
+        let s = min(normalizedStart, normalizedEnd)
+        let rawEnd = max(normalizedStart, normalizedEnd)
+
+        // Limita o volume máximo a 30 dias
+        let maxAllowedEnd = calendar.date(byAdding: .day, value: 29, to: s) ?? rawEnd
+        let clampedEnd = min(rawEnd, maxAllowedEnd)
+
+        self.start = s
+        self.end = clampedEnd
+    }
+
+    func contains(_ date: Date, calendar: Calendar = .dashboard) -> Bool {
+        let startOfDay = calendar.startOfDay(for: start)
+        let endDay = calendar.startOfDay(for: end)
+        guard let endOfDay = calendar.date(bySettingHour: 23, minute: 59, second: 59, of: endDay) else {
+            return date >= startOfDay && date <= end
+        }
+        return date >= startOfDay && date <= endOfDay
     }
 }
 
@@ -45,7 +70,7 @@ struct WeekRangePicker: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text("Selecione um período")
+            Text("Selecione um período (máx. 30 dias)")
                 .font(.title2.weight(.semibold))
                 .foregroundStyle(theme.calendar)
                 .padding(.bottom, 28)
@@ -65,68 +90,78 @@ struct WeekRangePicker: View {
             .padding(.bottom, 16)
 
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 0), count: 7), spacing: 0) {
-                ForEach(Array(weekdaySymbols.enumerated()), id: \.offset) { _, symbol in
+                ForEach(weekdaySymbols, id: \.self) { symbol in
                     Text(symbol)
-                        .font(.subheadline.weight(.medium))
-                        .foregroundStyle(Color.Token.interactiveAccent.opacity(0.72))
-                        .frame(height: 36)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(Color.secondary)
+                        .frame(maxWidth: .infinity, minHeight: 32)
                 }
 
-                ForEach(monthDays) { day in
-                    CalendarDayButton(
-                        day: day,
-                        state: selectionState(for: day.date),
-                        isToday: calendar.isDateInToday(day.date),
-                        action: { select(day.date) }
-                    )
+                ForEach(daysInMonth) { day in
+                    if day.isWithinDisplayedMonth {
+                        CalendarDayButton(
+                            day: day,
+                            state: selectionState(for: day.date),
+                            isToday: calendar.isDateInToday(day.date),
+                            action: { select(day.date) }
+                        )
+                    } else {
+                        Color.clear
+                            .frame(maxWidth: .infinity, minHeight: 48, maxHeight: 48)
+                    }
                 }
             }
-            .padding(8)
-//            .background(
-//                RoundedRectangle(cornerRadius: 18, style: .continuous)
-//                    .fill(Color.green.opacity(0.045))
-//            )
         }
-        .padding(24)
-        .frame(width: 430)
-        .modifier(GlassCardModifier(cornerRadius: 24))
-        .onChange(of: selection) { _, range in
-            startDate = range.start
-            endDate = range.end
-        }
+        .padding(32)
+        .frame(width: 380)
+        .background(Color.Token.surfaceRaised, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
     }
 }
 
 private extension WeekRangePicker {
-    static func month(containing date: Date) -> Date {
-        Calendar.dashboard.date(from: Calendar.dashboard.dateComponents([.year, .month], from: date)) ?? date
-    }
-
     var monthTitle: String {
         displayedMonth.formatted(.dateTime.locale(Locale(identifier: "pt_BR")).month(.wide).year())
+            .capitalized
     }
 
     var weekdaySymbols: [String] {
-        ["D", "S", "T", "Q", "Q", "S", "S"]
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "pt_BR")
+        var symbols = formatter.veryShortStandaloneWeekdaySymbols ?? []
+        if calendar.firstWeekday == 2, !symbols.isEmpty {
+            symbols.append(symbols.removeFirst())
+        }
+        return symbols
     }
 
-    var monthDays: [CalendarDay] {
-        guard let monthInterval = calendar.dateInterval(of: .month, for: displayedMonth) else { return [] }
-        let firstGridDay = calendar.dateInterval(of: .weekOfYear, for: monthInterval.start)?.start ?? monthInterval.start
-        let lastMonthDay = calendar.date(byAdding: .day, value: -1, to: monthInterval.end) ?? monthInterval.end
-        let lastGridDay = calendar.date(byAdding: .day, value: 6, to: calendar.dateInterval(of: .weekOfYear, for: lastMonthDay)?.start ?? lastMonthDay) ?? lastMonthDay
-        let dayCount = calendar.dateComponents([.day], from: firstGridDay, to: lastGridDay).day ?? 0
+    var daysInMonth: [CalendarDay] {
+        guard let monthInterval = calendar.dateInterval(of: .month, for: displayedMonth),
+              let monthFirstWeek = calendar.dateInterval(of: .weekOfMonth, for: monthInterval.start),
+              let monthLastWeek = calendar.dateInterval(of: .weekOfMonth, for: monthInterval.end - 1)
+        else { return [] }
 
-        return (0...dayCount).compactMap { offset in
-            guard let date = calendar.date(byAdding: .day, value: offset, to: firstGridDay) else { return nil }
-            return CalendarDay(date: date, belongsToDisplayedMonth: calendar.isDate(date, equalTo: displayedMonth, toGranularity: .month))
+        var days: [CalendarDay] = []
+        var currentDate = monthFirstWeek.start
+
+        while currentDate < monthLastWeek.end {
+            let isWithinMonth = calendar.isDate(currentDate, equalTo: displayedMonth, toGranularity: .month)
+            days.append(CalendarDay(date: currentDate, isWithinDisplayedMonth: isWithinMonth))
+            guard let nextDate = calendar.date(byAdding: .day, value: 1, to: currentDate) else { break }
+            currentDate = nextDate
         }
+
+        return days
+    }
+
+    static func month(containing date: Date, calendar: Calendar = .dashboard) -> Date {
+        calendar.dateInterval(of: .month, for: date)?.start ?? calendar.startOfDay(for: date)
     }
 
     func selectionState(for date: Date) -> CalendarDaySelectionState {
-        if calendar.isDate(date, inSameDayAs: startDate) {
-            return calendar.isDate(startDate, inSameDayAs: endDate) ? .single : .start
+        if calendar.isDate(date, inSameDayAs: startDate) && calendar.isDate(date, inSameDayAs: endDate) {
+            return .single
         }
+        if calendar.isDate(date, inSameDayAs: startDate) { return .start }
         if calendar.isDate(date, inSameDayAs: endDate) { return .end }
         return date > startDate && date < endDate ? .middle : .none
     }
@@ -137,12 +172,10 @@ private extension WeekRangePicker {
         case .complete:
             if calendar.isDate(selectedDay, inSameDayAs: startDate),
                !calendar.isDate(startDate, inSameDayAs: endDate) {
-                // Ao remover o início, o fim restante passa a ser o novo início.
                 selectSingleDay(endDate)
                 return
             }
             if calendar.isDate(selectedDay, inSameDayAs: endDate) {
-                // Ao remover o fim, mantém o início aguardando um novo término.
                 selectSingleDay(startDate)
                 return
             }
@@ -203,9 +236,6 @@ private struct CalendarDayButton: View {
 
     var body: some View {
         Button(action: action) {
-            // A célula sempre tem a mesma área. Os estados visuais ficam em
-            // overlays para que círculos, bordas e preenchimentos não mudem
-            // o tamanho que o LazyVGrid usa para calcular suas linhas.
             Color.clear
                 .frame(maxWidth: .infinity, minHeight: 48, maxHeight: 48)
                 .overlay { rangeHighlight }
@@ -220,88 +250,79 @@ private struct CalendarDayButton: View {
         }
         .buttonStyle(.plain)
         .onHover { isHovering = $0 }
-        .accessibilityLabel(day.date.formatted(date: .long, time: .omitted))
-        .accessibilityValue(accessibilityValue)
-        .accessibilityHint("Seleciona esta data para o período")
     }
 
     @ViewBuilder
     private var rangeHighlight: some View {
-        GeometryReader { proxy in
-            let halfWidth = proxy.size.width / 2
-
-            switch state {
-            case .middle:
-                Rectangle()
-                    .fill(theme.calendar.opacity(0.14))
-            case .start:
-                Rectangle()
-                    .fill(theme.calendar.opacity(0.14))
-                    .frame(width: halfWidth)
-                    .frame(maxWidth: .infinity, alignment: .trailing)
-            case .end:
-                Rectangle()
-                    .fill(theme.calendar.opacity(0.14))
-                    .frame(width: halfWidth)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            case .none, .single:
+        switch state {
+        case .middle:
+            Rectangle()
+                .fill(theme.calendar.opacity(0.18))
+        case .start:
+            HStack(spacing: 0) {
                 Color.clear
+                    .frame(maxWidth: .infinity)
+                Rectangle()
+                    .fill(theme.calendar.opacity(0.18))
+                    .frame(maxWidth: .infinity)
             }
+        case .end:
+            HStack(spacing: 0) {
+                Rectangle()
+                    .fill(theme.calendar.opacity(0.18))
+                    .frame(maxWidth: .infinity)
+                Color.clear
+                    .frame(maxWidth: .infinity)
+            }
+        case .single, .none:
+            EmptyView()
         }
-        .frame(height: 42)
     }
 
     @ViewBuilder
     private var dayIndicator: some View {
-        ZStack {
-            if state == .start || state == .end || state == .single {
-                Circle().fill(theme.calendar)
-            } else if isToday {
-                Circle().strokeBorder(theme.calendar, lineWidth: 1.5)
-                    .padding(6)
+        switch state {
+        case .single, .start, .end:
+            Circle()
+                .fill(theme.calendar)
+                .frame(width: 36, height: 36)
+        case .none:
+            if isToday {
+                Circle()
+                    .stroke(theme.calendar, lineWidth: 1.5)
+                    .frame(width: 36, height: 36)
             } else if isHovering {
-                Capsule().fill(theme.calendar.opacity(0.08))
-                    .padding(.horizontal, 2)
-                    .padding(.vertical, 4)
+                Circle()
+                    .fill(theme.calendar.opacity(0.12))
+                    .frame(width: 36, height: 36)
             }
+        case .middle:
+            EmptyView()
         }
-        .frame(width: 42, height: 42)
     }
 
     private var foregroundColor: Color {
         switch state {
-        case .start, .end, .single: Color.Token.textOnAccent
-        case .none, .middle: day.belongsToDisplayedMonth ? Color.Token.textPrimary : Color.Token.textSecondary.opacity(0.48)
+        case .single, .start, .end:
+            .white
+        case .middle:
+            theme.calendar
+        case .none:
+            Color.primary
         }
     }
-
-    private var accessibilityValue: String {
-        switch state {
-        case .none: isToday ? "Hoje" : ""
-        case .single: "Início do período"
-        case .start: "Início do período"
-        case .middle: "No período selecionado"
-        case .end: "Fim do período"
-        }
-    }
-}
-
-private enum CalendarDaySelectionState {
-    case none, single, start, middle, end
 }
 
 private struct CalendarDay: Identifiable {
-    let date: Date
-    let belongsToDisplayedMonth: Bool
     var id: Date { date }
+    let date: Date
+    let isWithinDisplayedMonth: Bool
 }
 
-extension Calendar {
-    static var dashboard: Calendar {
-        var calendar = Calendar(identifier: .gregorian)
-        calendar.locale = Locale(identifier: "pt_BR")
-        calendar.firstWeekday = 1
-        calendar.minimumDaysInFirstWeek = 1
-        return calendar
-    }
+private enum CalendarDaySelectionState {
+    case none
+    case single
+    case start
+    case middle
+    case end
 }

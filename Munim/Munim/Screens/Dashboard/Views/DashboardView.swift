@@ -21,7 +21,7 @@ struct DashboardView: View {
     @State private var selectedDestination: SidebarDestination? = .dashboard
     @State private var selectedTab: FilterTab = MockData.filterTabs.first!
     @StateObject private var badgeStore = DashboardBadgeStore()
-    @State private var columns = MockData.columns
+    @State private var columns: [BoardColumn] = []
     @State private var archivedItems: [StoredBoardItem] = []
     @State private var deletedItems: [StoredBoardItem] = []
     @State private var archivedItem: StoredBoardItem?
@@ -29,6 +29,10 @@ struct DashboardView: View {
     @State private var searchText: String = ""
     @State private var selectedWeek = WeekRange(start: Date())
     @Environment(\.appTheme) private var theme
+    @Environment(AuthService.self) private var authService
+
+    // MARK: - Serviço de dados reais da API
+    @State private var dashboardService = DashboardService()
     var body: some View {
         ZStack {
             // O gradiente vive no nível do SplitView para preencher
@@ -51,13 +55,22 @@ struct DashboardView: View {
                     columns: columns,
                     archivedItems: archivedItems,
                     deletedItems: deletedItems,
+                    people: dashboardService.people,
+                    userName: authService.currentPerson?.name.components(separatedBy: " ").first ?? "Fabíola",
+                    isRefreshing: dashboardService.isRefreshing,
+                    lastUpdated: dashboardService.lastUpdated,
                     markAsReviewed: markAsReviewed,
                     updateItem: updateItem,
                     archiveItem: archiveItem,
                     deleteItem: deleteItem,
                     unarchiveItem: unarchiveItem,
                     restoreDeletedItem: restoreDeletedItem,
-                    createItem: createItem
+                    createItem: createItem,
+                    onRefresh: {
+                        Task {
+                            await dashboardService.refresh()
+                        }
+                    }
                 )
             }
             .navigationSplitViewStyle(.balanced)
@@ -65,6 +78,23 @@ struct DashboardView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .onAppear {
             purgeExpiredDeletedItems()
+            refreshBadgeStore()
+            // Iniciar monitoramento ao vivo do backend
+            dashboardService.startPolling(intervalSeconds: 30)
+            Task {
+                await dashboardService.loadDashboard()
+                columns = dashboardService.boardColumns
+                refreshBadgeStore()
+            }
+        }
+        .onDisappear {
+            dashboardService.stopPolling()
+        }
+        .onChange(of: dashboardService.boardColumns) { _, newCols in
+            columns = newCols
+            refreshBadgeStore()
+        }
+        .onChange(of: selectedWeek) { _, _ in
             refreshBadgeStore()
         }
         .alert("Card arquivado", isPresented: $isArchiveUndoPresented) {
@@ -92,6 +122,9 @@ struct DashboardView: View {
         guard let columnIndex = columns.firstIndex(where: { $0.id == columnID }) else { return }
         columns[columnIndex].update(itemID: itemID, with: draft)
         refreshBadgeStore()
+        Task {
+            await dashboardService.updateItem(itemID: itemID, draft: draft)
+        }
     }
 
     private func archiveItem(itemID: BoardItem.ID, in columnID: BoardColumn.ID) {
@@ -110,12 +143,18 @@ struct DashboardView: View {
         deletedItems.append(StoredBoardItem(columnID: columnID, teamName: columns[columnIndex].title, item: removedItem.item, index: removedItem.index, storedAt: Date()))
         purgeExpiredDeletedItems()
         refreshBadgeStore()
+        Task {
+            await dashboardService.deleteItem(itemID: itemID)
+        }
     }
 
     private func createItem(draft: BoardItemDraft, in team: String, category: DashboardItemCategory) {
         guard let columnIndex = columns.firstIndex(where: { $0.title == team }) else { return }
         columns[columnIndex].items.append(BoardItem(draft: draft, category: category))
         refreshBadgeStore()
+        Task {
+            await dashboardService.createItem(draft: draft, teamName: team, category: category)
+        }
     }
 
     private func restoreArchivedItem() {
@@ -151,7 +190,8 @@ struct DashboardView: View {
         badgeStore.refresh(
             columns: columns,
             archivedItems: archivedItems,
-            deletedItems: deletedItems
+            deletedItems: deletedItems,
+            dateRange: selectedWeek
         )
     }
 
@@ -170,13 +210,14 @@ final class DashboardBadgeStore: ObservableObject {
     func refresh(
         columns: [BoardColumn],
         archivedItems: [StoredBoardItem],
-        deletedItems: [StoredBoardItem]
+        deletedItems: [StoredBoardItem],
+        dateRange: WeekRange? = nil
     ) {
         let updatedTabs = MockData.filterTabs.map { tab in
             var updatedTab = tab
             switch tab.destination {
             case let .active(category):
-                updatedTab.count = columns.reduce(0) { $0 + $1.unreadItemCount(for: category) }
+                updatedTab.count = columns.reduce(0) { $0 + $1.unreadItemCount(for: category, in: dateRange) }
             case .archived:
                 updatedTab.count = archivedItems.count
             case .deleted:
@@ -210,6 +251,10 @@ private struct SidebarDetailView: View {
     let columns: [BoardColumn]
     let archivedItems: [StoredBoardItem]
     let deletedItems: [StoredBoardItem]
+    let people: [PersonDTO]
+    let userName: String
+    let isRefreshing: Bool
+    let lastUpdated: Date?
     let markAsReviewed: (BoardItem.ID, BoardColumn.ID) -> Void
     let updateItem: (BoardItem.ID, BoardColumn.ID, BoardItemDraft) -> Void
     let archiveItem: (BoardItem.ID, BoardColumn.ID) -> Void
@@ -217,6 +262,7 @@ private struct SidebarDetailView: View {
     let unarchiveItem: (StoredBoardItem) -> Void
     let restoreDeletedItem: (StoredBoardItem) -> Void
     let createItem: (BoardItemDraft, String, DashboardItemCategory) -> Void
+    let onRefresh: () -> Void
 
     @ViewBuilder
     var body: some View {
@@ -230,30 +276,35 @@ private struct SidebarDetailView: View {
                 columns: columns,
                 archivedItems: archivedItems,
                 deletedItems: deletedItems,
+                people: people,
+                userName: userName,
+                isRefreshing: isRefreshing,
+                lastUpdated: lastUpdated,
                 markAsReviewed: markAsReviewed,
                 updateItem: updateItem,
                 archiveItem: archiveItem,
                 deleteItem: deleteItem,
                 unarchiveItem: unarchiveItem,
                 restoreDeletedItem: restoreDeletedItem,
-                createItem: createItem
+                createItem: createItem,
+                onRefresh: onRefresh
             )
         case .archived:
-            StoredItemsDetailView(
+            SidebarStoredItemsDetailView(
                 title: "Arquivados",
-                items: archivedItems,
+                searchText: $searchText,
+                storedItems: archivedItems,
                 actionTitle: "Desarquivar",
                 actionSystemImage: "tray.and.arrow.up",
-                searchText: $searchText,
                 action: unarchiveItem
             )
         case .deleted:
-            StoredItemsDetailView(
+            SidebarStoredItemsDetailView(
                 title: "Excluídos",
-                items: deletedItems,
+                searchText: $searchText,
+                storedItems: deletedItems,
                 actionTitle: "Restaurar",
                 actionSystemImage: "arrow.uturn.backward",
-                searchText: $searchText,
                 action: restoreDeletedItem
             )
         case .attachments:
@@ -267,16 +318,16 @@ private struct SidebarDetailView: View {
     }
 }
 
-private struct StoredItemsDetailView: View {
+private struct SidebarStoredItemsDetailView: View {
     let title: String
-    let items: [StoredBoardItem]
+    @Binding var searchText: String
+    let storedItems: [StoredBoardItem]
     let actionTitle: String
     let actionSystemImage: String
-    @Binding var searchText: String
     let action: (StoredBoardItem) -> Void
 
     private var visibleItems: [StoredBoardItem] {
-        items.filter { $0.item.matches(searchQuery: searchText) }
+        storedItems.filter { $0.item.matches(searchQuery: searchText) }
     }
 
     var body: some View {
@@ -311,6 +362,10 @@ struct DashboardContentView: View {
     let columns: [BoardColumn]
     let archivedItems: [StoredBoardItem]
     let deletedItems: [StoredBoardItem]
+    let people: [PersonDTO]
+    let userName: String
+    let isRefreshing: Bool
+    let lastUpdated: Date?
     let markAsReviewed: (BoardItem.ID, BoardColumn.ID) -> Void
     let updateItem: (BoardItem.ID, BoardColumn.ID, BoardItemDraft) -> Void
     let archiveItem: (BoardItem.ID, BoardColumn.ID) -> Void
@@ -318,6 +373,7 @@ struct DashboardContentView: View {
     let unarchiveItem: (StoredBoardItem) -> Void
     let restoreDeletedItem: (StoredBoardItem) -> Void
     let createItem: (BoardItemDraft, String, DashboardItemCategory) -> Void
+    let onRefresh: () -> Void
 
     var body: some View {
         GeometryReader { proxy in
@@ -325,7 +381,7 @@ struct DashboardContentView: View {
                 VStack(alignment: .leading, spacing: 24) {
                     // Cabeçalho com saudação e navegador de semana
                     HStack(alignment: .center) {
-                        GreetingHeaderView(name: "Fabíola")
+                        GreetingHeaderView(name: userName)
                         Spacer()
                         WeekNavigatorView(selection: $selectedWeek)
                     }
@@ -339,7 +395,11 @@ struct DashboardContentView: View {
 
                         Spacer(minLength: 16)
 
-                        DashboardRefreshStatusView()
+                        DashboardRefreshStatusView(
+                            isRefreshing: isRefreshing,
+                            lastUpdated: lastUpdated,
+                            onRefresh: onRefresh
+                        )
                     }
 
                     dashboardBoard
@@ -388,6 +448,8 @@ struct DashboardContentView: View {
                 columns: columns,
                 filter: category,
                 searchText: searchText,
+                selectedWeek: selectedWeek,
+                people: people,
                 markAsReviewed: markAsReviewed,
                 updateItem: updateItem,
                 archiveItem: archiveItem,
@@ -903,20 +965,42 @@ private struct DashboardToolbarIconButton: View {
 }
 
 private struct DashboardRefreshStatusView: View {
+    let isRefreshing: Bool
+    let lastUpdated: Date?
+    let onRefresh: () -> Void
     @Environment(\.appTheme) private var theme
+
+    private var formattedDate: String {
+        guard let lastUpdated else {
+            return "Sincronizado recentemente"
+        }
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "pt_BR")
+        formatter.dateFormat = "d 'de' MMMM, HH:mm'h'"
+        return "Última atualização em \(formatter.string(from: lastUpdated))"
+    }
     
     var body: some View {
         VStack(alignment: .trailing, spacing: 4) {
-            Button("Atualizar", systemImage: "arrow.clockwise") {
-                // Ação: atualizar
+            Button(action: onRefresh) {
+                HStack(spacing: 6) {
+                    if isRefreshing {
+                        ProgressView()
+                            .controlSize(.mini)
+                    } else {
+                        Image(systemName: "arrow.clockwise")
+                            .font(.caption2)
+                    }
+                    Text(isRefreshing ? "Atualizando…" : "Atualizar")
+                }
             }
-            .labelStyle(.titleOnly)
             .font(.caption.weight(.semibold))
-            .underline()
+            .underline(!isRefreshing)
             .buttonStyle(.plain)
             .foregroundStyle(theme.accentColor)
+            .disabled(isRefreshing)
 
-            Text("Última atualização em 29 de julho, 14:30h")
+            Text(formattedDate)
                 .font(.caption2)
                 .foregroundStyle(Color.Token.textSecondary)
         }
@@ -1038,6 +1122,8 @@ struct BoardView: View {
     let columns: [BoardColumn]
     let filter: DashboardItemCategory?
     let searchText: String
+    let selectedWeek: WeekRange
+    let people: [PersonDTO]
     let markAsReviewed: (BoardItem.ID, BoardColumn.ID) -> Void
     let updateItem: (BoardItem.ID, BoardColumn.ID, BoardItemDraft) -> Void
     let archiveItem: (BoardItem.ID, BoardColumn.ID) -> Void
@@ -1051,11 +1137,11 @@ struct BoardView: View {
         // sem prender o usuário a um valor fixo pequeno demais.
         ScrollView(.horizontal, showsIndicators: false) {
             LazyHStack(alignment: .top, spacing: 32) {
-                ForEach(columns.map { $0.filtered(by: filter, matching: searchText) }) { column in
+                ForEach(columns.map { $0.filtered(by: filter, matching: searchText, in: selectedWeek) }) { column in
                     BoardColumnView(
                         column: column,
                         onSelectTeam: {
-                            selectedTeam = MockData.teamDetails.first { $0.name == column.title }
+                            selectedTeam = TeamDetail(column: column, people: people)
                         },
                         markAsReviewed: { itemID in
                             markAsReviewed(itemID, column.id)

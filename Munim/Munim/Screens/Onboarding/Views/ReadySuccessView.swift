@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct ReadySuccessView: View {
+    var syncWarning: String?
     var onStartMunim: () -> Void = {}
     
     @State private var animateBubbles = false
@@ -14,6 +15,8 @@ struct ReadySuccessView: View {
         static let textColor = Color(red: 0.35, green: 0.55, blue: 0.90)
         static let buttonBackground = Color(red: 0.25, green: 0.45, blue: 0.88)
         static let bubble = Color(red: 0.68, green: 0.88, blue: 0.30)
+        static let warningBackground = Color.orange.opacity(0.12)
+        static let warningText = Color(red: 0.7, green: 0.4, blue: 0.0)
     }
     
     // MARK: - Configuração das Bolhas
@@ -44,6 +47,13 @@ struct ReadySuccessView: View {
                 VStack(alignment: .leading, spacing: 0) {
                     headerSection
                     descriptionSection
+                    
+                    // Banner de aviso (se houver integrações não configuradas)
+                    if let warning = syncWarning {
+                        warningBanner(message: warning)
+                            .padding(.top, 20)
+                    }
+
                     Spacer()
                     actionButton
                 }
@@ -83,6 +93,26 @@ struct ReadySuccessView: View {
         .font(.system(size: bodySize, weight: .regular))
         .foregroundColor(Theme.textColor)
     }
+
+    private func warningBanner(message: String) -> some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .foregroundColor(Theme.warningText)
+                .font(.system(size: 14))
+                .padding(.top, 1)
+
+            Text(message)
+                .font(.system(size: 13, weight: .regular))
+                .foregroundColor(Theme.warningText)
+                .lineSpacing(3)
+                .frame(maxWidth: 400, alignment: .leading)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .background(Theme.warningBackground)
+        .cornerRadius(8)
+        .frame(maxWidth: 430, alignment: .leading)
+    }
     
     private var actionButton: some View {
         Button(action: onStartMunim) {
@@ -121,6 +151,6 @@ struct ReadySuccessView: View {
 }
 
 #Preview {
-    ReadySuccessView()
+    ReadySuccessView(syncWarning: "Directory não configurado • Gmail não configurado")
         .frame(width: 960, height: 600)
 }

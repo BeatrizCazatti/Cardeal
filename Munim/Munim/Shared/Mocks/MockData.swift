@@ -10,11 +10,11 @@ enum MockData {
     ]
 
     static let filterTabs: [FilterTab] = [
-        FilterTab(title: "Geral", count: 3),
-        FilterTab(title: "Reuniões", count: 1, destination: .active(.meeting)),
-        FilterTab(title: "Tarefas", count: 1, destination: .active(.task)),
+        FilterTab(title: "Geral", count: 0),
+        FilterTab(title: "Reuniões", count: 0, destination: .active(.meeting)),
+        FilterTab(title: "Tarefas", count: 0, destination: .active(.task)),
         FilterTab(title: "Mudanças", count: 0, destination: .active(.change)),
-        FilterTab(title: "Decisões", count: 1, destination: .active(.decision))
+        FilterTab(title: "Decisões", count: 0, destination: .active(.decision))
     ]
 
     static let attachments: [AttachmentItem] = [

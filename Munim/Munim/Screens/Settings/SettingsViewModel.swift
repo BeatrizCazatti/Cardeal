@@ -38,15 +38,41 @@ enum SyncInterval: String, CaseIterable, Identifiable {
     case fiveMinutes = "A cada 5 minutos"
     case fifteenMinutes = "A cada 15 minutos"
     case thirtyMinutes = "A cada 30 minutos"
+    case sixtyMinutes = "A cada 60 minutos"
     case manual = "Manual"
 
     var id: Self { self }
+
+    /// Valor em minutos para enviar ao backend (nil = manual/realtime).
+    var minutes: Int? {
+        switch self {
+        case .realtime: return nil
+        case .fiveMinutes: return 5
+        case .fifteenMinutes: return 15
+        case .thirtyMinutes: return 30
+        case .sixtyMinutes: return 60
+        case .manual: return nil
+        }
+    }
+
+    /// Cria a partir de minutos recebidos do backend.
+    static func from(minutes: Int) -> SyncInterval {
+        switch minutes {
+        case 5: return .fiveMinutes
+        case 15: return .fifteenMinutes
+        case 30: return .thirtyMinutes
+        case 60: return .sixtyMinutes
+        default: return .sixtyMinutes
+        }
+    }
+
     var icon: String {
         switch self {
         case .realtime: "bolt.horizontal.fill"
         case .fiveMinutes: "5.circle"
         case .fifteenMinutes: "15.circle"
         case .thirtyMinutes: "30.circle"
+        case .sixtyMinutes: "60.circle"
         case .manual: "hand.raised"
         }
     }
@@ -101,6 +127,7 @@ enum GoogleScope: String, CaseIterable, Identifiable {
     case drive = "Google Drive"
     case chat = "Google Chat"
     case meet = "Google Meet"
+    case directory = "Directory (Admin)"
 
     var id: Self { self }
     var icon: String {
@@ -110,6 +137,7 @@ enum GoogleScope: String, CaseIterable, Identifiable {
         case .drive: "externaldrive"
         case .chat: "message"
         case .meet: "video"
+        case .directory: "person.badge.key"
         }
     }
 }
@@ -192,12 +220,74 @@ struct SettingsMember: Identifiable, Codable, Equatable {
         let parts = name.split(separator: " ").prefix(2)
         return parts.compactMap { $0.first.map(String.init) }.joined().uppercased()
     }
+
+    /// Cria a partir de um PersonDTO real do backend.
+    init(from person: PersonDTO, teamName: String) {
+        self.id = person.id ?? UUID()
+        self.name = person.name
+        self.email = person.email ?? ""
+        self.team = teamName
+        self.role = person.jobTitle.lowercased().contains("gerente") ||
+                    person.jobTitle.lowercased().contains("diretor") ||
+                    person.jobTitle.lowercased().contains("lead") ? .admin : .member
+        self.isActive = person.active
+    }
+
+    init(id: UUID = UUID(), name: String, email: String, team: String, role: SettingsTeamRole, isActive: Bool = true) {
+        self.id = id
+        self.name = name
+        self.email = email
+        self.team = team
+        self.role = role
+        self.isActive = isActive
+    }
 }
 
 struct SettingsTeam: Identifiable, Codable, Equatable {
     var id: UUID = UUID()
     var name: String
     var channels: [String]
+    var memberCount: Int = 0
+
+    init(id: UUID = UUID(), name: String, channels: [String] = [], memberCount: Int = 0) {
+        self.id = id
+        self.name = name
+        self.channels = channels
+        self.memberCount = memberCount
+    }
+}
+
+// MARK: - DTOs de Integração para Settings
+
+struct IntegrationSettingDTO: Codable {
+    var id: UUID?
+    var provider: String
+    var name: String?
+    var authType: String
+    var scopes: [String]
+    var services: [String]
+    var isEnabled: Bool
+    var oauthConnected: Bool
+    var oauthAdminEmail: String?
+    var syncIntervalMinutes: Int
+    var createdAt: Date?
+    var updatedAt: Date?
+}
+
+struct GoogleOAuthStatusDTO: Codable {
+    var connected: Bool
+    var adminEmail: String?
+    var connectedAt: Date?
+    var serviceAccountConfigured: Bool
+}
+
+struct SyncConfigDTO: Codable {
+    var syncIntervalMinutes: Int
+    var lastRanAt: Date?
+}
+
+struct UpdateSyncConfigRequest: Codable {
+    let syncIntervalMinutes: Int
 }
 
 // MARK: - ViewModel
@@ -207,96 +297,207 @@ final class SettingsViewModel: ObservableObject {
     private enum Key {
         static let palette = "appTheme"
         static let appearance = InterfaceAppearance.storageKey
-        static let sync = "settings.syncInterval"
         static let decisions = "settings.notifyDecisions"
         static let tasks = "settings.notifyTasks"
-        static let apiURL = "settings.apiURL"
-        static let apiPort = "settings.apiPort"
         static let syncDatabase = "settings.syncDatabase"
         static let serverToken = "settings.serverToken"
-        static let googleEmail = "settings.googleEmail"
-        static let googleScopes = "settings.googleScopes"
-        static let integrations = "settings.integrations"
-        static let members = "settings.members"
-        static let teams = "settings.teams"
         static let sensitivity = "settings.sensitivity"
         static let confirmation = "settings.confirmation"
     }
 
     private let defaults: UserDefaults
 
-    // Geral
+    // MARK: - Preferências locais (persistidas em UserDefaults)
+
     @Published var palette: AppTheme { didSet { defaults.set(palette.rawValue, forKey: Key.palette) } }
     @Published var appearance: InterfaceAppearance { didSet { defaults.set(appearance.rawValue, forKey: Key.appearance) } }
-    @Published var syncInterval: SyncInterval { didSet { defaults.set(syncInterval.rawValue, forKey: Key.sync) } }
     @Published var notifyDecisions: Bool { didSet { defaults.set(notifyDecisions, forKey: Key.decisions) } }
     @Published var notifyTasks: Bool { didSet { defaults.set(notifyTasks, forKey: Key.tasks) } }
-
-    // Servidor
-    @Published var apiURL: String { didSet { defaults.set(apiURL, forKey: Key.apiURL) } }
-    @Published var apiPort: Int { didSet { defaults.set(apiPort, forKey: Key.apiPort) } }
     @Published var syncDatabase: Bool { didSet { defaults.set(syncDatabase, forKey: Key.syncDatabase) } }
     @Published var serverToken: String { didSet { defaults.set(serverToken, forKey: Key.serverToken) } }
-    @Published var connectionStatus: ConnectionStatus = .unknown
-
-    // Integrações
-    @Published var googleEmail: String { didSet { defaults.set(googleEmail, forKey: Key.googleEmail) } }
-    @Published var googleScopes: Set<GoogleScope> { didSet { save(googleScopes.map(\.rawValue), key: Key.googleScopes) } }
-    @Published var integrations: [IntegrationAccount] { didSet { save(integrations, key: Key.integrations) } }
-
-    // Equipe
-    @Published var members: [SettingsMember] { didSet { save(members, key: Key.members) } }
-    @Published var teams: [SettingsTeam] { didSet { save(teams, key: Key.teams) } }
-
-    // Automações
     @Published var captureSensitivity: Double { didSet { defaults.set(captureSensitivity, forKey: Key.sensitivity) } }
     @Published var requiresSchedulingConfirmation: Bool { didSet { defaults.set(requiresSchedulingConfirmation, forKey: Key.confirmation) } }
 
-    // MARK: Init
+    // MARK: - Dados do Backend (carregados via API)
+
+    @Published var connectionStatus: ConnectionStatus = .unknown
+    @Published var isLoadingBackend: Bool = false
+
+    /// URL base real usada pelo APIClient
+    var apiURL: String { APIConfig.baseURL.absoluteString }
+
+    // Integração Google
+    @Published var googleStatus: GoogleOAuthStatusDTO? = nil
+    var googleEmail: String { googleStatus?.adminEmail ?? "" }
+    var isGoogleConnected: Bool { googleStatus?.connected ?? false }
+    @Published var googleScopes: Set<GoogleScope> = []
+
+    // Sync interval do backend
+    @Published var syncInterval: SyncInterval = .sixtyMinutes {
+        didSet {
+            Task { await pushSyncInterval() }
+        }
+    }
+    private var isSyncIntervalLoading = false
+
+    // Membros e times reais
+    @Published var members: [SettingsMember] = []
+    @Published var teams: [SettingsTeam] = []
+
+    // Terceiros (somente UI local por enquanto)
+    @Published var integrations: [IntegrationAccount] = [
+        IntegrationAccount(integration: .slack, workspace: "", isConnected: false),
+        IntegrationAccount(integration: .notion, workspace: "", isConnected: false)
+    ]
+
+    // MARK: - Init
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
         palette = AppTheme(storedValue: defaults.string(forKey: Key.palette) ?? AppTheme.defaultTheme.rawValue)
         appearance = InterfaceAppearance(rawValue: defaults.string(forKey: Key.appearance) ?? "") ?? .system
-        syncInterval = SyncInterval(rawValue: defaults.string(forKey: Key.sync) ?? "") ?? .fifteenMinutes
         notifyDecisions = Self.bool(defaults, Key.decisions, true)
         notifyTasks = Self.bool(defaults, Key.tasks, true)
-
-        apiURL = defaults.string(forKey: Key.apiURL) ?? "https://api.cardeal.local"
-        apiPort = Self.int(defaults, Key.apiPort, 5432)
         syncDatabase = Self.bool(defaults, Key.syncDatabase, true)
         serverToken = defaults.string(forKey: Key.serverToken) ?? ""
-
-        googleEmail = defaults.string(forKey: Key.googleEmail) ?? ""
-        googleScopes = Set(
-            Self.load([String].self, defaults, Key.googleScopes)?
-                .compactMap(GoogleScope.init(rawValue:)) ?? [.calendar, .gmail]
-        )
-        integrations = Self.load([IntegrationAccount].self, defaults, Key.integrations) ?? Self.defaultIntegrations
-        members = Self.load([SettingsMember].self, defaults, Key.members) ?? Self.defaultMembers
-        teams = Self.load([SettingsTeam].self, defaults, Key.teams) ?? Self.defaultTeams
-
         captureSensitivity = Self.double(defaults, Key.sensitivity, 0.6)
         requiresSchedulingConfirmation = Self.bool(defaults, Key.confirmation, true)
+
+        Task { await loadFromBackend() }
     }
 
-    // MARK: Ações
+    // MARK: - Carregamento do Backend
+
+    func loadFromBackend() async {
+        isLoadingBackend = true
+        defer { isLoadingBackend = false }
+
+        await withTaskGroup(of: Void.self) { group in
+            group.addTask { await self.loadGoogleStatus() }
+            group.addTask { await self.loadSyncConfig() }
+            group.addTask { await self.loadTeamAndMembers() }
+            group.addTask { await self.testConnection() }
+        }
+    }
+
+    private func loadGoogleStatus() async {
+        do {
+            let status: GoogleOAuthStatusDTO = try await APIClient.shared.request(
+                "/api/integrations/google/status"
+            )
+            googleStatus = status
+
+            var activeScopes: Set<GoogleScope> = []
+
+            if status.connected {
+                // Directory e Chat só precisam de OAuth (sem service account)
+                activeScopes.insert(.directory)
+                activeScopes.insert(.chat)
+            }
+
+            if status.serviceAccountConfigured {
+                // Gmail, Calendar e Drive exigem service account configurada
+                activeScopes.insert(.gmail)
+                activeScopes.insert(.calendar)
+                activeScopes.insert(.drive)
+            }
+
+            googleScopes = activeScopes
+        } catch {
+            googleStatus = GoogleOAuthStatusDTO(
+                connected: false, adminEmail: nil, connectedAt: nil, serviceAccountConfigured: false
+            )
+            googleScopes = []
+        }
+    }
+
+    private func loadSyncConfig() async {
+        do {
+            let config: SyncConfigDTO = try await APIClient.shared.request(
+                "/api/integrations/sync-config"
+            )
+            isSyncIntervalLoading = true
+            syncInterval = SyncInterval.from(minutes: config.syncIntervalMinutes)
+            isSyncIntervalLoading = false
+        } catch {
+            // Mantém o valor padrão
+        }
+    }
+
+    private func loadTeamAndMembers() async {
+        do {
+            async let fetchedTeams: [TeamDTO] = APIClient.shared.request("/api/teams")
+            async let fetchedPeople: [PersonDTO] = APIClient.shared.request("/api/people")
+
+            let (teamsResult, peopleResult) = try await (fetchedTeams, fetchedPeople)
+
+            let teamLookup = Dictionary(uniqueKeysWithValues: teamsResult.compactMap { t in t.id.map { ($0, t.name) } })
+
+            members = peopleResult.map { person in
+                let teamName: String
+                if let teamID = person.teamID, let name = teamLookup[teamID] {
+                    teamName = name
+                } else {
+                    teamName = "Sem time"
+                }
+                return SettingsMember(from: person, teamName: teamName)
+            }
+
+            teams = teamsResult.map { team in
+                let count = peopleResult.filter { $0.teamID == team.id }.count
+                return SettingsTeam(
+                    id: team.id ?? UUID(),
+                    name: team.name,
+                    channels: [],
+                    memberCount: count
+                )
+            }
+        } catch {
+            print("[SettingsViewModel] ❌ Erro ao carregar equipe: \(error)")
+        }
+    }
+
+    private func pushSyncInterval() async {
+        guard !isSyncIntervalLoading, let minutes = syncInterval.minutes else { return }
+        let body = UpdateSyncConfigRequest(syncIntervalMinutes: minutes)
+        let _: SyncConfigDTO? = try? await APIClient.shared.request(
+            "/api/integrations/sync-config",
+            method: "PUT",
+            body: body
+        )
+    }
+
+    // MARK: - Ações
 
     func testConnection() async {
         connectionStatus = .testing
-        try? await Task.sleep(for: .seconds(0.8))
-        let ping = Int.random(in: 18...84)
-        connectionStatus = .online(pingMs: ping)
+        let start = Date()
+        do {
+            let _: [OrganizationDTO] = try await APIClient.shared.request("/api/organizations")
+            let ms = Int(Date().timeIntervalSince(start) * 1000)
+            connectionStatus = .online(pingMs: ms)
+        } catch {
+            connectionStatus = .offline(reason: error.localizedDescription)
+        }
     }
 
     func connectGoogle() async {
-        try? await Task.sleep(for: .seconds(0.6))
-        googleEmail = "beatriz@cardeal.com"
-        googleScopes = [.calendar, .gmail, .drive]
+        do {
+            let dto: GoogleAuthURLDTO = try await APIClient.shared.request(
+                "/api/integrations/google/auth-url?redirect=munim://auth/callback"
+            )
+            if let url = URL(string: dto.authorizeURL) {
+                await NSWorkspace.shared.open(url)
+            }
+        } catch {
+            print("[SettingsViewModel] ❌ Erro ao obter URL de autenticação Google: \(error)")
+        }
     }
 
     func disconnectGoogle() {
-        googleEmail = ""
+        googleStatus = GoogleOAuthStatusDTO(
+            connected: false, adminEmail: nil, connectedAt: nil, serviceAccountConfigured: false
+        )
         googleScopes = []
     }
 
@@ -308,7 +509,7 @@ final class SettingsViewModel: ObservableObject {
         } else {
             try? await Task.sleep(for: .milliseconds(450))
             integrations[index].isConnected = true
-            integrations[index].workspace = "\(integration.rawValue) · Workspace Cardeal"
+            integrations[index].workspace = "\(integration.rawValue) · Workspace"
         }
     }
 
@@ -338,7 +539,7 @@ final class SettingsViewModel: ObservableObject {
         teams[index].channels.removeAll { $0 == channel }
     }
 
-    // MARK: Persistência
+    // MARK: - Persistência local
 
     private func save<Value: Encodable>(_ value: Value, key: String) {
         if let data = try? JSONEncoder().encode(value) {
@@ -362,24 +563,5 @@ final class SettingsViewModel: ObservableObject {
     private static func double(_ defaults: UserDefaults, _ key: String, _ fallback: Double) -> Double {
         defaults.object(forKey: key) as? Double ?? fallback
     }
-
-    // MARK: Defaults
-
-    private static let defaultMembers: [SettingsMember] = [
-        SettingsMember(name: "Fabíola Machado", email: "fabiola@cardeal.com", team: "Atendimento", role: .admin),
-        SettingsMember(name: "Aline Souza", email: "aline@cardeal.com", team: "Design", role: .member),
-        SettingsMember(name: "Rafael Lima", email: "rafael@cardeal.com", team: "Engenharia", role: .observer)
-    ]
-
-    private static let defaultTeams: [SettingsTeam] = [
-        SettingsTeam(name: "Atendimento", channels: ["#atendimento-geral"]),
-        SettingsTeam(name: "Design", channels: ["#design-system"]),
-        SettingsTeam(name: "Engenharia", channels: ["#engenharia"])
-    ]
-
-    private static let defaultIntegrations: [IntegrationAccount] = [
-        IntegrationAccount(integration: .slack, workspace: "", isConnected: false),
-        IntegrationAccount(integration: .notion, workspace: "", isConnected: false)
-    ]
 }
 
