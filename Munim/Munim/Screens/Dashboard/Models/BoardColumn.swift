@@ -1,5 +1,36 @@
 import SwiftUI
 
+// MARK: - Armazenamento persistente de cards aprovados / revisados
+
+final class ReviewedItemsStore {
+    static let shared = ReviewedItemsStore()
+    private let key = "Munim.ReviewedItemIDs"
+
+    private var reviewedIDs: Set<String> {
+        get {
+            let array = UserDefaults.standard.stringArray(forKey: key) ?? []
+            return Set(array)
+        }
+        set {
+            UserDefaults.standard.set(Array(newValue), forKey: key)
+        }
+    }
+
+    func isReviewed(id: String) -> Bool {
+        reviewedIDs.contains(id)
+    }
+
+    func markAsReviewed(id: String) {
+        var current = reviewedIDs
+        current.insert(id)
+        reviewedIDs = current
+    }
+
+    func clear() {
+        UserDefaults.standard.removeObject(forKey: key)
+    }
+}
+
 /// Uma coluna do board (ex.: "Atendimento", "Design"...).
 struct BoardColumn: Identifiable, Hashable {
     let id: UUID
@@ -22,9 +53,25 @@ struct BoardColumn: Identifiable, Hashable {
         )
     }
 
-    func filtered(by category: DashboardItemCategory?, matching searchQuery: String) -> BoardColumn {
+    func filtered(
+        by category: DashboardItemCategory?,
+        matching searchQuery: String,
+        in dateRange: WeekRange? = nil
+    ) -> BoardColumn {
         var filteredColumn = filtered(by: category)
-        filteredColumn.items = filteredColumn.items.filter { $0.matches(searchQuery: searchQuery) }
+
+        let query = searchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !query.isEmpty {
+            filteredColumn.items = filteredColumn.items.filter { $0.matches(searchQuery: query) }
+        }
+
+        if let dateRange {
+            filteredColumn.items = filteredColumn.items.filter { item in
+                guard let itemDate = item.rawDate else { return true }
+                return dateRange.contains(itemDate)
+            }
+        }
+
         return filteredColumn
     }
 
@@ -32,6 +79,7 @@ struct BoardColumn: Identifiable, Hashable {
     mutating func markAsReviewed(itemID: BoardItem.ID) -> Bool {
         guard let index = items.firstIndex(where: { $0.id == itemID }),
               items[index].badgeCount != nil else { return false }
+        ReviewedItemsStore.shared.markAsReviewed(id: items[index].persistentKey)
         items[index].markAsReviewed()
         return true
     }
@@ -50,20 +98,28 @@ struct BoardColumn: Identifiable, Hashable {
         items.insert(item, at: min(index, items.count))
     }
 
-    func unreadItemCount(for category: DashboardItemCategory?) -> Int {
+    func unreadItemCount(for category: DashboardItemCategory?, in dateRange: WeekRange? = nil) -> Int {
         items.filter { item in
-            item.badgeCount != nil && (category == nil || item.category == category)
+            guard item.badgeCount != nil else { return false }
+            if let category, item.category != category { return false }
+            if let dateRange, let itemDate = item.rawDate {
+                return dateRange.contains(itemDate)
+            }
+            return true
         }.count
     }
 }
 
 /// Um card individual dentro de uma coluna do board.
 struct BoardItem: Identifiable, Hashable {
-    let id = UUID()
+    let id: UUID
+    let persistentKey: String
     var title: String
     /// Número exibido no badge circular no canto superior do card (opcional).
     var badgeCount: Int?
     var assignees: [Assignee]
+    /// Data real para filtragem cronológica precisa.
+    var rawDate: Date?
     /// Texto livre de data (ex.: "Amanhã - 17h").
     var dateText: String?
     /// Se `true`, destaca a data como "Nova data" (ex.: reagendamento).
@@ -75,9 +131,12 @@ struct BoardItem: Identifiable, Hashable {
     let category: DashboardItemCategory
 
     init(
+        id: UUID = UUID(),
+        persistentKey: String? = nil,
         title: String,
         badgeCount: Int? = nil,
         assignees: [Assignee] = [],
+        rawDate: Date? = nil,
         dateText: String? = nil,
         isRescheduled: Bool = false,
         location: String? = nil,
@@ -85,9 +144,13 @@ struct BoardItem: Identifiable, Hashable {
         priority: BoardItemPriority = .unset,
         category: DashboardItemCategory
     ) {
+        self.id = id
+        let key = persistentKey ?? "\(category.rawValue)_\(title)"
+        self.persistentKey = key
         self.title = title
         self.badgeCount = badgeCount
         self.assignees = assignees
+        self.rawDate = rawDate
         self.dateText = dateText
         self.isRescheduled = isRescheduled
         self.location = location
@@ -101,6 +164,7 @@ struct BoardItem: Identifiable, Hashable {
             title: draft.title,
             badgeCount: 1,
             assignees: draft.assignees,
+            rawDate: Date(),
             dateText: draft.dateText.emptyAsNil,
             location: draft.location.emptyAsNil,
             descriptionText: draft.description.emptyAsNil,
@@ -110,6 +174,7 @@ struct BoardItem: Identifiable, Hashable {
     }
 
     mutating func markAsReviewed() {
+        ReviewedItemsStore.shared.markAsReviewed(id: persistentKey)
         badgeCount = nil
     }
 

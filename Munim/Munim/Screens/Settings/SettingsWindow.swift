@@ -85,17 +85,17 @@ private struct GeneralSettingsView: View {
             }
 
             Section {
-                Picker("Sincronização", selection: $model.syncInterval) {
+                Picker("Sincronização automática", selection: $model.syncInterval) {
                     ForEach(SyncInterval.allCases) { interval in
-                        Text(interval.rawValue).tag(interval)
+                        Label(interval.rawValue, systemImage: interval.icon).tag(interval)
                     }
                 }
                 .pickerStyle(.menu)
-                Text("Define a frequência com que o Munim consulta o backend por atualizações.")
+                Text("Controla a frequência com que o backend sincroniza com Google Workspace. Alterações são salvas automaticamente no servidor.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             } header: {
-                Text("Sincronização & atualizações")
+                Text("Sincronização & Atualizações")
             }
 
             Section {
@@ -128,10 +128,14 @@ private struct IntegrationsSettingsView: View {
                     Text("Google Workspace")
                         .font(.headline)
                     Spacer()
-                    ConnectionBadge(isConnected: !model.googleEmail.isEmpty)
+                    if model.isLoadingBackend {
+                        ProgressView().scaleEffect(0.7)
+                    } else {
+                        ConnectionBadge(isConnected: model.isGoogleConnected)
+                    }
                 }
 
-                if model.googleEmail.isEmpty {
+                if !model.isGoogleConnected {
                     LabeledContent("Status") {
                         Text("Desconectado")
                             .foregroundStyle(.secondary)
@@ -139,17 +143,28 @@ private struct IntegrationsSettingsView: View {
                     Button {
                         Task { await model.connectGoogle() }
                     } label: {
-                        Label("Conectar Conta", systemImage: "person.crop.circle.badge.plus")
+                        Label("Conectar Conta Google", systemImage: "person.crop.circle.badge.plus")
                     }
                     .buttonStyle(.borderedProminent)
                 } else {
-                    LabeledContent("Conta") {
+                    LabeledContent("Conta Admin") {
                         Text(model.googleEmail)
                             .foregroundStyle(.primary)
                     }
-                    LabeledContent("Status") {
-                        Text("Conectado")
-                            .foregroundStyle(.green)
+                    if let connectedAt = model.googleStatus?.connectedAt {
+                        LabeledContent("Conectado em") {
+                            Text(connectedAt.formatted(date: .abbreviated, time: .shortened))
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    LabeledContent("Service Account") {
+                        if model.googleStatus?.serviceAccountConfigured == true {
+                            Label("Configurada", systemImage: "checkmark.seal.fill")
+                                .foregroundStyle(.green)
+                        } else {
+                            Label("Não configurada", systemImage: "exclamationmark.triangle")
+                                .foregroundStyle(.orange)
+                        }
                     }
                     Button(role: .destructive) {
                         model.disconnectGoogle()
@@ -160,14 +175,14 @@ private struct IntegrationsSettingsView: View {
             } header: {
                 Text("Google Workspace")
             } footer: {
-                if !model.googleEmail.isEmpty {
+                if model.isGoogleConnected {
                     Text("Escopos ativos: \(activeScopeTags)")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
             }
 
-            Section("Escopos concedidos") {
+            Section("Escopos Ativos") {
                 ForEach(GoogleScope.allCases) { scope in
                     LabeledContent {
                         if model.googleScopes.contains(scope) {
@@ -295,43 +310,57 @@ private struct ServerSettingsView: View {
                 }
 
                 LabeledContent("URL Base da API") {
-                    TextField("https://api.exemplo.com", text: $model.apiURL)
-                        .textFieldStyle(.roundedBorder)
-                        .frame(maxWidth: 260)
+                    Text(model.apiURL)
+                        .foregroundStyle(.secondary)
+                        .textSelection(.enabled)
                 }
-
-                LabeledContent("Porta") {
-                    HStack(spacing: 8) {
-                        TextField("5432", value: $model.apiPort, format: .number)
-                            .textFieldStyle(.roundedBorder)
-                            .frame(width: 80)
-                        Stepper("", value: $model.apiPort, in: 1...65_535)
-                            .labelsHidden()
-                    }
-                }
-
-                Toggle("Sincronizar com banco de dados local", isOn: $model.syncDatabase)
 
                 Button {
                     Task { await model.testConnection() }
                 } label: {
                     if model.connectionStatus == .testing {
-                        Label("Testando…", systemImage: "arrow.triangle.2.circlepath")
+                        Label("Verificando…", systemImage: "arrow.triangle.2.circlepath")
                     } else {
-                        Label("Testar conexão", systemImage: "bolt.horizontal.fill")
+                        Label("Testar conexão agora", systemImage: "bolt.horizontal.fill")
                     }
                 }
                 .buttonStyle(.borderedProminent)
                 .disabled(model.connectionStatus == .testing)
             } header: {
-                Text("Conexão com Backend (PostgreSQL / API)")
+                Text("Conexão com Backend (API)")
             } footer: {
-                Text("A porta padrão do PostgreSQL é 5432. O token é armazenado no Keychain ao salvar.")
+                Text("A URL da API é configurada em tempo de compilação via APIConfig.swift.")
                     .font(.caption)
             }
 
             Section {
-                LabeledContent("Service Account") {
+                LabeledContent("Sincronização ativa") {
+                    Text("\(model.syncInterval.minutes.map { "\($0) min" } ?? "Manual")")
+                        .foregroundStyle(.secondary)
+                }
+                LabeledContent("Membros sincronizados") {
+                    Text("\(model.members.count)")
+                        .foregroundStyle(.secondary)
+                }
+                LabeledContent("Times cadastrados") {
+                    Text("\(model.teams.count)")
+                        .foregroundStyle(.secondary)
+                }
+                Toggle("Usar banco de dados local (cache)", isOn: $model.syncDatabase)
+
+                Button {
+                    Task { await model.loadFromBackend() }
+                } label: {
+                    Label("Recarregar dados do backend", systemImage: "arrow.clockwise")
+                }
+                .buttonStyle(.bordered)
+                .disabled(model.isLoadingBackend)
+            } header: {
+                Text("Estado do Sistema")
+            }
+
+            Section {
+                LabeledContent("Service Account (JWT)") {
                     SecureField("Token de acesso", text: $model.serverToken)
                         .textFieldStyle(.roundedBorder)
                         .frame(maxWidth: 260)
@@ -347,7 +376,7 @@ private struct ServerSettingsView: View {
                         .disabled(model.serverToken.isEmpty)
                 }
             } header: {
-                Text("Conta Server")
+                Text("Conta de Serviço")
             } footer: {
                 Text("Recomendamos a rotação do token a cada 90 dias.")
                     .font(.caption)
@@ -366,37 +395,67 @@ private struct TeamSettingsView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            Table(model.members, selection: $selection) {
-                TableColumn("Membro") { member in
-                    HStack(spacing: 10) {
-                        MemberAvatar(initials: member.initials, role: member.role)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(member.name)
-                                .font(.body.weight(.medium))
-                            Text(member.email)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
+            if model.isLoadingBackend && model.members.isEmpty {
+                VStack(spacing: 12) {
+                    ProgressView()
+                    Text("Carregando membros do backend…")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if model.members.isEmpty {
+                VStack(spacing: 8) {
+                    Image(systemName: "person.2.slash")
+                        .font(.largeTitle)
+                        .foregroundStyle(.secondary)
+                    Text("Nenhum membro sincronizado")
+                        .font(.headline)
+                    Text("Faça um sync do Google Workspace para carregar os membros.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .padding()
+            } else {
+                Table(model.members, selection: $selection) {
+                    TableColumn("Membro") { member in
+                        HStack(spacing: 10) {
+                            MemberAvatar(initials: member.initials, role: member.role)
+                            VStack(alignment: .leading, spacing: 2) {
+                                HStack(spacing: 6) {
+                                    Text(member.name)
+                                        .font(.body.weight(.medium))
+                                    if !member.isActive {
+                                        Tag(label: "Inativo", tint: .secondary)
+                                    }
+                                }
+                                Text(member.email)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
                         }
                     }
-                }
-                TableColumn("Time") { member in
-                    Text(member.team)
-                }
-                .width(min: 120, ideal: 160)
-                TableColumn("Papel") { member in
-                    Picker("", selection: roleBinding(for: member)) {
-                        ForEach(SettingsTeamRole.allCases) { role in
-                            Label(role.rawValue, systemImage: role.icon).tag(role)
-                        }
+                    TableColumn("Time") { member in
+                        Text(member.team)
+                            .foregroundStyle(member.team == "Sem time" ? .secondary : .primary)
                     }
-                    .labelsHidden()
-                    .pickerStyle(.menu)
-                    .frame(width: 160)
+                    .width(min: 120, ideal: 160)
+                    TableColumn("Cargo") { member in
+                        Picker("", selection: roleBinding(for: member)) {
+                            ForEach(SettingsTeamRole.allCases) { role in
+                                Label(role.rawValue, systemImage: role.icon).tag(role)
+                            }
+                        }
+                        .labelsHidden()
+                        .pickerStyle(.menu)
+                        .frame(width: 160)
+                    }
+                    .width(min: 140, ideal: 180)
                 }
-                .width(min: 140, ideal: 180)
+                .tableStyle(.inset(alternatesRowBackgrounds: true))
+                .frame(minHeight: 240)
             }
-            .tableStyle(.inset(alternatesRowBackgrounds: true))
-            .frame(minHeight: 240)
 
             Divider()
 
@@ -416,9 +475,22 @@ private struct TeamSettingsView: View {
                 }
                 .disabled(selection == nil)
                 Spacer()
-                Text("\(model.members.count) membros")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                if model.isLoadingBackend {
+                    ProgressView().scaleEffect(0.7)
+                    Text("Sincronizando…").font(.caption).foregroundStyle(.secondary)
+                } else {
+                    Text("\(model.members.count) membros · \(model.teams.count) times")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                Button {
+                    Task { await model.loadFromBackend() }
+                } label: {
+                    Image(systemName: "arrow.clockwise")
+                }
+                .buttonStyle(.plain)
+                .help("Recarregar do backend")
+                .disabled(model.isLoadingBackend)
             }
             .padding(10)
         }
@@ -464,6 +536,7 @@ private struct AddMemberSheet: View {
             TextField("Nome", text: $name)
             TextField("E-mail", text: $email)
             Picker("Time", selection: $team) {
+                Text("Sem time").tag("")
                 ForEach(model.teams) { Text($0.name).tag($0.name) }
             }
             Picker("Papel", selection: $role) {

@@ -8,7 +8,13 @@ enum OnboardingStep {
 
 struct OnboardingView: View {
     let onFinish: () -> Void
+
+    @Environment(AuthService.self) private var authService
+
     @State private var currentStep: OnboardingStep = .welcome
+    @State private var isLoadingAuthURL: Bool = false
+    @State private var authError: String?
+
     @ScaledMetric(relativeTo: .title) private var welcomeTitleSize: CGFloat = 28
     @ScaledMetric(relativeTo: .largeTitle) private var brandTitleSize: CGFloat = 64
     @ScaledMetric(relativeTo: .title3) private var bodyTitleSize: CGFloat = 20
@@ -54,6 +60,16 @@ struct OnboardingView: View {
                 }
                 
                 Spacer()
+
+                // Mensagem de erro (local ou vinda do callback deep-link)
+                if let error = displayedError {
+                    Text(error)
+                        .font(.system(size: 13, weight: .regular))
+                        .foregroundColor(.red)
+                        .frame(maxWidth: 400, alignment: .leading)
+                        .padding(.bottom, 12)
+                        .transition(.opacity)
+                }
                 
                 // Botão de Ação
                 actionButton
@@ -76,6 +92,7 @@ struct OnboardingView: View {
         .background(Color.white)
         .ignoresSafeArea()
         .animation(.easeInOut(duration: 0.25), value: currentStep)
+        .animation(.easeInOut(duration: 0.2), value: authError)
     }
     
     // MARK: - Passos de Texto
@@ -134,25 +151,24 @@ struct OnboardingView: View {
     // MARK: - Botão de Ação
     
     private var actionButton: some View {
-        Button(action: {
-            switch currentStep {
-            case .welcome:
-                currentStep = .explanation
-            case .explanation:
-                currentStep = .permissions
-            case .permissions:
-                onFinish()
+        Button(action: handleAction) {
+            HStack(spacing: 8) {
+                if isLoadingAuthURL {
+                    ProgressView()
+                        .controlSize(.small)
+                        .tint(.white)
+                }
+                Text(buttonTitle)
+                    .font(.system(size: buttonTextSize, weight: .semibold))
+                    .foregroundColor(.white)
             }
-        }) {
-            Text(buttonTitle)
-                .font(.system(size: buttonTextSize, weight: .semibold))
-                .foregroundColor(.white)
-                .padding(.horizontal, currentStep == .permissions ? 28 : 36)
-                .padding(.vertical, 14)
-                .background(primaryBlue)
-                .cornerRadius(24)
+            .padding(.horizontal, currentStep == .permissions ? 28 : 36)
+            .padding(.vertical, 14)
+            .background(primaryBlue.opacity(isLoadingAuthURL ? 0.7 : 1.0))
+            .cornerRadius(24)
         }
         .buttonStyle(.plain)
+        .disabled(isLoadingAuthURL)
     }
     
     private var buttonTitle: String {
@@ -162,7 +178,41 @@ struct OnboardingView: View {
         case .explanation:
             return "Avançar"
         case .permissions:
-            return "Iniciar com Google Workspace"
+            return isLoadingAuthURL ? "Abrindo Google…" : "Iniciar com Google Workspace"
+        }
+    }
+
+    private var displayedError: String? {
+        authError ?? authService.authError
+    }
+
+    // MARK: - Lógica do botão
+
+    private func handleAction() {
+        authError = nil
+        authService.authError = nil
+        switch currentStep {
+        case .welcome:
+            currentStep = .explanation
+        case .explanation:
+            currentStep = .permissions
+        case .permissions:
+            startGoogleOAuth()
+        }
+    }
+
+    private func startGoogleOAuth() {
+        isLoadingAuthURL = true
+        Task {
+            defer { isLoadingAuthURL = false }
+            do {
+                let authURL = try await authService.fetchGoogleAuthURL()
+                // Abrir no browser padrão do macOS
+                NSWorkspace.shared.open(authURL)
+                // O app volta ao foco quando o sistema processa munim://auth/callback
+            } catch {
+                authError = "Não foi possível conectar ao servidor: \(error.localizedDescription)"
+            }
         }
     }
 }
@@ -170,4 +220,5 @@ struct OnboardingView: View {
 #Preview {
     OnboardingView()
         .frame(width: 960, height: 600)
+        .environment(AuthService())
 }

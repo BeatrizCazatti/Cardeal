@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- App Sandbox obrigatório para distribuição na Mac App Store -->
+	<key>com.apple.security.app-sandbox</key>
+	<true/>
+	<!-- Permite conexões de saída (HTTPS para a API Vapor) -->
+	<key>com.apple.security.network.client</key>
+	<true/>
+	<!-- Hardened Runtime: habilitar biblioteca de segurança -->
+	<key>com.apple.security.cs.allow-jit</key>
+	<false/>
+</dict>
+</plist>
