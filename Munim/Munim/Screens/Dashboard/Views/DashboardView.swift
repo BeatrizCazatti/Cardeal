@@ -1513,32 +1513,6 @@ private struct UnreadCardActionsView: View {
     }
 }
 
-
-//private struct BoardItemCardAppearanceModifier: ViewModifier {
-//    let isAwaitingReview: Bool
-//    @Environment(\.appTheme) private var theme
-//
-//    func body(content: Content) -> some View {
-//        if isAwaitingReview {
-//            content
-//                .background(
-//                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-//                        .fill(theme.newCardFillColor)
-//                )
-//                .overlay(
-//                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-//                        .stroke(
-//                            theme.newCardStrokeColor,
-//                            style: StrokeStyle(lineWidth: 2, dash: [5, 6])
-//                        )
-//                )
-////                .shadow(color: .black.opacity(0.06), radius: 4, y: 2)
-//        } else {
-//            content.modifier(GlassCardModifier())
-//        }
-//    }
-//}
-
 struct BoardItemCardModifier: ViewModifier {
     let isAwaitingReview: Bool
     @Environment(\.appTheme) private var theme
@@ -1550,9 +1524,8 @@ struct BoardItemCardModifier: ViewModifier {
                     RoundedRectangle(cornerRadius: 12, style: .continuous)
                         .fill(theme.newCardFillColor)
                 } else {
-                    // Fundo sólido semitransparente/branco padrão de cartões no HIG
                     RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .fill(Color(white: 1))
+                        .fill(Color.boardItemCard)
                 }
             }
             .overlay {
@@ -1693,19 +1666,19 @@ private struct BoardItemPriorityTag: View {
 
     private var accentColor: Color {
         switch priority {
-        case .high: Color(hex: 0xEF626A)
-        case .medium: Color(hex: 0xF5A33B)
-        case .low: Color(hex: 0x4CACEF)
-        case .unset: .gray.opacity(0.65)
+        case .high: Color.alta
+        case .medium: Color.media
+        case .low: Color.baixa
+        case .unset: Color.definirPrioridade
         }
     }
 
     private var backgroundColor: Color {
         switch priority {
-        case .high: Color(hex: 0xFDE2E4)
-        case .medium: Color(hex: 0xFFE5BB)
-        case .low: Color(hex: 0xD8EEFF)
-        case .unset: Color.gray.opacity(0.14)
+        case .high: Color.alta.opacity(0.5)
+        case .medium: Color.media.opacity(0.5)
+        case .low: Color.baixa.opacity(0.5)
+        case .unset: Color.definirPrioridade.opacity(0.5)
         }
     }
 
@@ -1717,7 +1690,7 @@ private struct BoardItemPriorityTag: View {
 
             Text(priority.title)
                 .font(.caption.weight(.medium))
-                .foregroundStyle(.black.opacity(0.62))
+                .foregroundStyle(.textPriorityTag)
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 6)
@@ -1730,12 +1703,14 @@ private struct MetadataRow: View {
     let text: String
     var highlighted: Bool = false
     var textColor: Color = Color.Token.textSecondary
+    
+    @Environment(\.appTheme) private var theme
 
     var body: some View {
         HStack(spacing: 6) {
             Image(systemName: systemImage)
                 .font(.caption)
-                .foregroundStyle(Color.Token.iconAccent)
+                .foregroundStyle(theme.accentColor)
             Text(text)
                 .font(.caption.weight(highlighted ? .semibold : .regular))
                 .foregroundStyle(highlighted ? Color.Token.statusAttention : textColor)
