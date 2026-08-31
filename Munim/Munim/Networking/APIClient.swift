@@ -68,8 +68,9 @@ final class APIClient {
 
     private let encoder: JSONEncoder = {
         let e = JSONEncoder()
+        // Sem keyEncodingStrategy: o frontend envia camelCase, compatível com o decoder padrão do Vapor.
+        // Não usar .convertToSnakeCase aqui — quebraria a decodificação dos DTOs no backend.
         e.dateEncodingStrategy = .iso8601
-        e.keyEncodingStrategy = .convertToSnakeCase
         return e
     }()
 
