@@ -10,9 +10,22 @@
 		384F6F9F301FC92D00EBF2B3 /* Munim.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Munim.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		38CCD58B30461C1E000DF5A8 /* Exceptions for "Munim" folder in "Munim" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 384F6F9E301FC92D00EBF2B3 /* Munim */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		384F6FA1301FC92D00EBF2B3 /* Munim */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				38CCD58B30461C1E000DF5A8 /* Exceptions for "Munim" folder in "Munim" target */,
+			);
 			path = Munim;
 			sourceTree = "<group>";
 		};
