@@ -41,36 +41,36 @@ struct MunimApp: App {
         }
         .windowResizability(.contentMinSize)
 
-        Window("Diagnóstico & Debug", id: "debug-inspector") {
-            DebugInspectorView()
-                .environment(authService)
-        }
-        .windowResizability(.contentMinSize)
-        .commands {
-            CommandGroup(after: .appSettings) {
-                Button("Configurações…") {
-                    NSApp.sendAction(
-                        Selector(("showSettingsWindow:")),
-                        to: nil,
-                        from: nil
-                    )
-                }
-                .keyboardShortcut(",", modifiers: .command)
-
-                Button("Diagnóstico & Debug…") {
-                    if let window = NSApp.windows.first(where: { $0.identifier?.rawValue == "debug-inspector" }) {
-                        window.makeKeyAndOrderFront(nil)
-                    } else {
-                        NSApp.sendAction(
-                            #selector(NSApplication.orderFrontStandardAboutPanel(_:)),
-                            to: nil,
-                            from: nil
-                        )
-                    }
-                }
-                .keyboardShortcut("d", modifiers: [.command, .option])
-            }
-        }
+//        Window("Diagnóstico & Debug", id: "debug-inspector") {
+//            DebugInspectorView()
+//                .environment(authService)
+//        }
+//        .windowResizability(.contentMinSize)
+//        .commands {
+//            CommandGroup(after: .appSettings) {
+//                Button("Configurações…") {
+//                    NSApp.sendAction(
+//                        Selector(("showSettingsWindow:")),
+//                        to: nil,
+//                        from: nil
+//                    )
+//                }
+//                .keyboardShortcut(",", modifiers: .command)
+//
+//                Button("Diagnóstico & Debug…") {
+//                    if let window = NSApp.windows.first(where: { $0.identifier?.rawValue == "debug-inspector" }) {
+//                        window.makeKeyAndOrderFront(nil)
+//                    } else {
+//                        NSApp.sendAction(
+//                            #selector(NSApplication.orderFrontStandardAboutPanel(_:)),
+//                            to: nil,
+//                            from: nil
+//                        )
+//                    }
+//                }
+//                .keyboardShortcut("d", modifiers: [.command, .option])
+//            }
+//        }
     }
 
     // MARK: - Processamento do deep-link OAuth
@@ -181,44 +181,44 @@ private struct AppFlowView: View {
             }
 
             // Botão flutuante discreto de diagnóstico/debug
-            Button {
-                isShowingDebugInspector = true
-            } label: {
-                HStack(spacing: 5) {
-                    Image(systemName: "ladybug.fill")
-                    Text("Debug")
-                        .font(.system(size: 11, weight: .bold))
-                }
-                .foregroundColor(.white)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 5)
-                .background(Color.purple.opacity(0.85))
-                .cornerRadius(14)
-                .shadow(color: .black.opacity(0.15), radius: 3, x: 0, y: 2)
-            }
-            .buttonStyle(.plain)
-            .padding(14)
+//            Button {
+//                isShowingDebugInspector = true
+//            } label: {
+//                HStack(spacing: 5) {
+//                    Image(systemName: "ladybug.fill")
+//                    Text("Debug")
+//                        .font(.system(size: 11, weight: .bold))
+//                }
+//                .foregroundColor(.white)
+//                .padding(.horizontal, 10)
+//                .padding(.vertical, 5)
+//                .background(Color.purple.opacity(0.85))
+//                .cornerRadius(14)
+//                .shadow(color: .black.opacity(0.15), radius: 3, x: 0, y: 2)
+//            }
+//            .buttonStyle(.plain)
+//            .padding(14)
         }
         .animation(.easeInOut(duration: 0.25), value: screen)
-        .sheet(isPresented: $isShowingDebugInspector) {
-            DebugInspectorView()
-                .environment(authService)
-        }
-        // Deep-link recebido → avança do onboarding para loading
-        .onChange(of: authService.isAuthenticated) { _, isAuth in
-            if isAuth && screen == .onboarding {
-                screen = .loading
-            } else if !isAuth {
-                screen = .onboarding
-            }
-        }
-        // 401 global → logout + volta para onboarding
-        .onReceive(
-            NotificationCenter.default.publisher(for: APIClient.unauthorizedNotification)
-        ) { _ in
-            authService.logout()
-            screen = .onboarding
-        }
+//        .sheet(isPresented: $isShowingDebugInspector) {
+//            DebugInspectorView()
+//                .environment(authService)
+//        }
+//        // Deep-link recebido → avança do onboarding para loading
+//        .onChange(of: authService.isAuthenticated) { _, isAuth in
+//            if isAuth && screen == .onboarding {
+//                screen = .loading
+//            } else if !isAuth {
+//                screen = .onboarding
+//            }
+//        }
+//        // 401 global → logout + volta para onboarding
+//        .onReceive(
+//            NotificationCenter.default.publisher(for: APIClient.unauthorizedNotification)
+//        ) { _ in
+//            authService.logout()
+//            screen = .onboarding
+//        }
     }
 
     private func resizeWindow(to size: CGSize) {
