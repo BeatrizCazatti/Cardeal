@@ -77,7 +77,9 @@ struct OnboardingView: View {
             .padding(.top, currentStep == .welcome ? 120 : 72)
             .padding(.leading, 80)
             .padding(.trailing, 40)
+            .padding(.bottom, 60) // Adicionado espaçamento interno inferior para afastar o botão da borda
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+            .background(Color.white) // Garante fundo branco específico no lado esquerdo
             
             // Lado Direito: Imagem estática de fundo/prévia
             GeometryReader { geometry in
@@ -89,11 +91,11 @@ struct OnboardingView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .frame(width: 960, height: 600)
-        .background(Color.white)
-        .ignoresSafeArea()
+        .background(Color.white) // Fundo branco global da janela
         .animation(.easeInOut(duration: 0.25), value: currentStep)
         .animation(.easeInOut(duration: 0.2), value: authError)
     }
+
     
     // MARK: - Passos de Texto
     
