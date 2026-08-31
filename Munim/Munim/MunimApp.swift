@@ -58,7 +58,7 @@ private struct AppFlowView: View {
         case dashboard
     }
 
-    @State private var screen: Screen = .dashboard
+    @State private var screen: Screen = .onboarding
 
     var body: some View {
         Group {
