@@ -1025,8 +1025,9 @@ private struct DashboardToolbarPrimaryButton: View {
                     .lineLimit(1)
             }
             .foregroundStyle(Color.Token.textOnAccent)
-            .frame(minWidth: 136, minHeight: 44)
-            .padding(.horizontal, 16)
+            .padding(.horizontal, 18)
+            .frame(minWidth: 136)
+            .frame(height: 48)
             .background(Capsule().fill(theme.accentColor))
             .contentShape(Capsule())
         }

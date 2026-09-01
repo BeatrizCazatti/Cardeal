@@ -32,7 +32,6 @@ struct FilterTabsView: View {
                 )
             }
         }
-        .frame(minHeight: 58, alignment: .bottomLeading)
         // Mantém a largura natural das abas para não comprimir os controles
         // que as acompanham na barra do dashboard.
         .layoutPriority(0)
@@ -49,17 +48,13 @@ struct FilterTabsView: View {
             unselectedTextColor: Color.Token.textNavigation,
             currentTab: selectedIndex
         )
-        .padding(.horizontal, 12)
-        .padding(.vertical, 4)
+        .padding(.horizontal, 6)
+        .padding(.vertical, 3)
         .background(Color.Token.surfaceRaised, in: Capsule(style: .continuous))
         .overlay {
             Capsule(style: .continuous)
                 .strokeBorder(Color.Token.borderSubtle.opacity(0.65), lineWidth: 1)
         }
-        // O badge é uma sobreposição do segmento; esta folga o mantém fora da
-        // track, sem aumentar artificialmente o tamanho da cápsula.
-        .padding(.top, 12)
-        .padding(.trailing, 12)
     }
 
     private var selectedIndex: Binding<Int> {
