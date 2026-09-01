@@ -2,11 +2,12 @@ import SwiftUI
 import Combine
 
 /// Armazena e gerencia o histórico de pesquisas recentes do usuário.
-/// Usa @AppStorage para persistência automática entre lançamentos do app.
+/// Usa UserDefaults diretamente para persistência confiável entre sessões.
 final class RecentSearchesStore: ObservableObject {
     static let shared = RecentSearchesStore()
 
-    @AppStorage("recentSearches") private var storedSearchesData: Data = Data()
+    private let storageKey = "munim.recentSearches"
+    private let defaults = UserDefaults.standard
 
     @Published private(set) var recentSearches: [String] = []
 
@@ -18,19 +19,19 @@ final class RecentSearchesStore: ObservableObject {
 
     /// Carrega as pesquisas recentes do armazenamento persistente
     private func loadRecentSearches() {
-        guard !storedSearchesData.isEmpty,
-              let searches = try? JSONDecoder().decode([String].self, from: storedSearchesData) else {
+        if let array = defaults.stringArray(forKey: storageKey) {
+            recentSearches = array
+        } else if let data = defaults.data(forKey: storageKey),
+                  let searches = try? JSONDecoder().decode([String].self, from: data) {
+            recentSearches = searches
+        } else {
             recentSearches = []
-            return
         }
-        recentSearches = searches
     }
 
     /// Salva as pesquisas recentes no armazenamento persistente
     private func saveRecentSearches() {
-        if let data = try? JSONEncoder().encode(recentSearches) {
-            storedSearchesData = data
-        }
+        defaults.set(recentSearches, forKey: storageKey)
     }
 
     /// Adiciona uma nova pesquisa ao histórico (remove duplicatas e mantém ordem de mais recente)
@@ -67,7 +68,7 @@ final class RecentSearchesStore: ObservableObject {
     /// Retorna sugestões filtradas baseadas no texto digitado
     func filteredSuggestions(for query: String) -> [String] {
         let trimmedQuery = query.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        guard !trimmedQuery.isEmpty else { return [] }
+        guard !trimmedQuery.isEmpty else { return recentSearches }
 
         return recentSearches.filter { search in
             search.lowercased().contains(trimmedQuery)
