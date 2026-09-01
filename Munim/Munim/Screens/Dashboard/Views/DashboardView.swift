@@ -1312,7 +1312,7 @@ struct BoardColumnView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             Button(action: onSelectTeam) {
-                Text(column.title)
+                Text(column.title.capitalized)
                     .font(.headline)
                     .foregroundStyle(Color.Token.textPrimary)
                     .lineLimit(1)
