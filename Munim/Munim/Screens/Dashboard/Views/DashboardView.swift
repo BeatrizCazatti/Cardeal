@@ -1137,23 +1137,24 @@ struct BoardView: View {
         // sem prender o usuário a um valor fixo pequeno demais.
         ScrollView(.horizontal, showsIndicators: false) {
             LazyHStack(alignment: .top, spacing: 32) {
-                ForEach(columns.map { $0.filtered(by: filter, matching: searchText, in: selectedWeek) }) { column in
+                ForEach(columns) { rawColumn in
+                    let displayColumn = rawColumn.filtered(by: filter, matching: searchText, in: selectedWeek)
                     BoardColumnView(
-                        column: column,
+                        column: displayColumn,
                         onSelectTeam: {
-                            selectedTeam = TeamDetail(column: column, people: people)
+                            selectedTeam = TeamDetail(column: rawColumn, people: people)
                         },
                         markAsReviewed: { itemID in
-                            markAsReviewed(itemID, column.id)
+                            markAsReviewed(itemID, rawColumn.id)
                         },
                         updateItem: { itemID, draft in
-                            updateItem(itemID, column.id, draft)
+                            updateItem(itemID, rawColumn.id, draft)
                         },
                         archiveItem: { itemID in
-                            archiveItem(itemID, column.id)
+                            archiveItem(itemID, rawColumn.id)
                         },
                         requestDeletion: { item in
-                            itemPendingDeletion = PendingDeletion(item: item, columnID: column.id)
+                            itemPendingDeletion = PendingDeletion(item: item, columnID: rawColumn.id)
                         }
                     )
                         .frame(width: 320)
