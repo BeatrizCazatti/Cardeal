@@ -55,7 +55,7 @@ struct TeamDetailSheet: View {
         VStack(spacing: 0) {
             VStack(alignment: .leading, spacing: 0) {
                 HStack {
-                    Text(team.name)
+                    Text(team.name.capitalized)
                         .font(.largeTitle.weight(.semibold))
 
                     Spacer()
