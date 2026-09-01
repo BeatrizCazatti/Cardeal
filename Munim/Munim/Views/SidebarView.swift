@@ -32,6 +32,16 @@ struct SidebarView: View {
             NavigationLink(value: SidebarDestination.attachments) {
                 Label("Anexos", systemImage: "folder")
             }
+
+            Section {
+                Button {
+                    openWindow(id: "settings")
+                } label: {
+                    Label("Configurações", systemImage: "gearshape")
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(Color.Token.textNavigation)
+            }
         }
         .listStyle(.sidebar)
         // Material translúcido (efeito "Liquid Glass") para que o gradiente
@@ -47,10 +57,8 @@ struct SidebarView: View {
                     openWindow(id: "settings")
                 } label: {
                     Image(systemName: "gearshape")
-                        .imageScale(.medium)
                 }
-                .buttonStyle(.plain)
-                .help("Configurações")
+                .help("Configurações (⌘,)")
                 .accessibilityLabel("Configurações")
             }
         }
