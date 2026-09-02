@@ -934,7 +934,7 @@ struct NewBoardItemSheet: View {
 
                     Picker("Time", selection: $selectedTeam) {
                         ForEach(teamNames, id: \.self) { team in
-                            Text(team).tag(team)
+                            Text(team.capitalized).tag(team)
                         }
                     }
 
