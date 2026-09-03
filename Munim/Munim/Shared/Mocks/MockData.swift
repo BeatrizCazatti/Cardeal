@@ -6,7 +6,6 @@ enum MockData {
         SidebarItem(title: "Calendário", systemImage: "calendar"),
         SidebarItem(title: "Equipe", systemImage: "person.3"),
         SidebarItem(title: "Relatórios", systemImage: "chart.bar.doc.horizontal"),
-        SidebarItem(title: "Configurações", systemImage: "gearshape")
     ]
 
     static let filterTabs: [FilterTab] = [

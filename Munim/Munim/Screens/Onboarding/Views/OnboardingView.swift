@@ -1,4 +1,5 @@
 import SwiftUI
+import AuthenticationServices
 
 enum OnboardingStep {
     case welcome
@@ -202,6 +203,17 @@ struct OnboardingView: View {
             startGoogleOAuth()
         }
     }
+    
+    // Cria uma classe auxiliar para fornecer o contexto da janela no macOS
+    private class WebAuthPresentationProvider: NSObject, ASWebAuthenticationPresentationContextProviding {
+        func presentationAnchor(for session: ASWebAuthenticationSession) -> ASPresentationAnchor {
+            // Retorna a janela principal ativa do aplicativo no macOS
+            return NSApplication.shared.windows.first ?? NSWindow()
+        }
+    }
+
+    // Mantem a instância guardada para evitar que seja desalocada antes do término
+    private let presentationProvider = WebAuthPresentationProvider()
 
     private func startGoogleOAuth() {
         isLoadingAuthURL = true
@@ -209,9 +221,22 @@ struct OnboardingView: View {
             defer { isLoadingAuthURL = false }
             do {
                 let authURL = try await authService.fetchGoogleAuthURL()
-                // Abrir no browser padrão do macOS
-                NSWorkspace.shared.open(authURL)
-                // O app volta ao foco quando o sistema processa munim://auth/callback
+                let callbackURLScheme = "munim"
+                
+                let session = ASWebAuthenticationSession(url: authURL, callbackURLScheme: callbackURLScheme) { callbackURL, error in
+                    if let error = error {
+                        authError = "Não foi possível conectar ao servidor: \(error.localizedDescription)"
+                        return
+                    }
+                    
+                    guard let callbackURL = callbackURL else { return }
+                    // Lógica de tratamento do callback aqui
+                }
+                
+                // Atribui a classe compatível com NSObject
+                session.presentationContextProvider = presentationProvider
+                session.start()
+                
             } catch {
                 authError = "Não foi possível conectar ao servidor: \(error.localizedDescription)"
             }

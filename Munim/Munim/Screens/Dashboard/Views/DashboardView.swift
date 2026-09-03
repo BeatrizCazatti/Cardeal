@@ -334,7 +334,9 @@ private struct SidebarStoredItemsDetailView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
                 Text(title)
-                    .font(.largeTitle.weight(.regular))
+//                    .font(.largeTitle.weight(.regular))
+                    .adaptiveTextStyle(.largeTitle)
+                    .fontWeight(Font.Weight.regular)
                     .foregroundStyle(Color.Token.textBrand)
 
                 StoredItemsBoardView(
@@ -484,7 +486,9 @@ struct GreetingHeaderView: View {
     var body: some View {
         (
             Text("Olá, " + name + "!")
-                .font(.title.weight(.regular))
+//                .font(.title.weight(.regular))
+                .adaptiveTextStyle(.title)
+                .fontWeight(.regular)
         )
         .foregroundStyle(Color.Token.textBrand)
     }
@@ -513,7 +517,9 @@ struct WeekNavigatorView: View {
                 showCalendar.toggle()
             } label: {
                 Text(selectedWeekText)
-                .font(.title3.weight(.medium))
+//                .font(.title3.weight(.medium))
+                .adaptiveTextStyle(.title3)
+                .fontWeight(Font.Weight.medium)
                 .foregroundStyle(theme.accentColor)
             }
             .buttonStyle(.plain)
@@ -609,13 +615,16 @@ private struct DashboardToolbarControls: View {
             if isSearchExpanded {
                 HStack(spacing: 6) {
                     Image(systemName: "magnifyingglass")
-                        .font(.caption.weight(.semibold))
+//                        .font(.caption.weight(.semibold))
+                        .adaptiveTextStyle(.caption)
+                        .fontWeight(Font.Weight.semibold)
                         .foregroundStyle(Color.Token.interactiveAccent)
                         .padding(.leading, 8)
 
                     TextField("Buscar cards…", text: $searchText)
                         .textFieldStyle(.plain)
-                        .font(.callout)
+//                        .font(.callout)
+                        .adaptiveTextStyle(.callout)
                         .foregroundStyle(Color.Token.textPrimary)
                         .focused($isSearchFocused)
                         .frame(minWidth: 160, idealWidth: 200)
@@ -634,7 +643,8 @@ private struct DashboardToolbarControls: View {
                             searchText = ""
                         } label: {
                             Image(systemName: "xmark.circle.fill")
-                                .font(.caption)
+//                                .font(.caption)
+                                .adaptiveTextStyle(.caption)
                                 .foregroundStyle(Color.Token.textSecondary)
                         }
                         .buttonStyle(.plain)
@@ -649,6 +659,7 @@ private struct DashboardToolbarControls: View {
                     } label: {
                         Image(systemName: "xmark")
                             .font(.caption2.weight(.bold))
+                            .fontWeight(Font.Weight.bold)
                             .foregroundStyle(Color.Token.textSecondary)
                             .frame(width: 24, height: 24)
                             .contentShape(Circle())
@@ -729,7 +740,9 @@ private struct SearchHistoryPopover: View {
         VStack(alignment: .leading, spacing: 0) {
             HStack {
                 Text("Pesquisas Recentes")
-                    .font(.caption.weight(.semibold))
+//                    .font(.caption.weight(.semibold))
+                    .adaptiveTextStyle(.caption)
+                    .fontWeight(Font.Weight.semibold)
                     .foregroundStyle(Color.Token.textSecondary)
                     .textCase(.uppercase)
                     .tracking(0.5)
@@ -737,7 +750,9 @@ private struct SearchHistoryPopover: View {
                 Spacer()
 
                 Button("Limpar Tudo", action: onClearAll)
-                    .font(.caption.weight(.medium))
+//                    .font(.caption.weight(.medium))
+                    .adaptiveTextStyle(.caption)
+                    .fontWeight(Font.Weight.medium)
                     .foregroundStyle(Color.Token.interactiveAccent)
                     .buttonStyle(.plain)
             }
@@ -779,7 +794,8 @@ private struct SearchHistoryRow: View {
                     .foregroundStyle(Color.Token.textSecondary)
 
                 Text(text)
-                    .font(.callout)
+//                    .font(.callout)
+                    .adaptiveTextStyle(.callout)
                     .foregroundStyle(Color.Token.textPrimary)
                     .lineLimit(1)
 
@@ -859,14 +875,17 @@ private struct DashboardRefreshStatusView: View {
                     Text(isRefreshing ? "Atualizando…" : "Atualizar")
                 }
             }
-            .font(.caption.weight(.semibold))
+//            .font(.caption.weight(.semibold))
+            .adaptiveTextStyle(.caption)
+            .fontWeight(Font.Weight.semibold)
             .underline(!isRefreshing)
             .buttonStyle(.plain)
             .foregroundStyle(theme.accentColor)
             .disabled(isRefreshing)
 
             Text(formattedDate)
-                .font(.caption2)
+//                .font(.caption2)
+                .adaptiveTextStyle(.caption2)
                 .foregroundStyle(Color.Token.textSecondary)
         }
         .frame(minWidth: 235, alignment: .trailing)
@@ -886,7 +905,9 @@ private struct DashboardToolbarPrimaryButton: View {
                     .font(.body.weight(.semibold))
 
                 Text(title)
-                    .font(.body.weight(.semibold))
+//                    .font(.body.weight(.semibold))
+                    .adaptiveTextStyle(.body)
+                    .fontWeight(.semibold)
                     .lineLimit(1)
             }
             .foregroundStyle(Color.Token.textOnAccent)
@@ -919,6 +940,8 @@ struct NewBoardItemSheet: View {
         VStack(alignment: .leading, spacing: 20) {
             Text("Novo item")
                 .font(.title2.weight(.semibold))
+                .adaptiveTextStyle(.title2)
+                .fontWeight(.semibold)
 
             ScrollView {
                 Form {
@@ -934,7 +957,7 @@ struct NewBoardItemSheet: View {
 
                     Picker("Time", selection: $selectedTeam) {
                         ForEach(teamNames, id: \.self) { team in
-                            Text(team).tag(team)
+                            Text(team.capitalized).tag(team)
                         }
                     }
 
@@ -1101,7 +1124,7 @@ private struct StoredItemsColumnView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text(teamName)
+            Text(teamName.capitalized)
                 .font(.headline)
                 .foregroundStyle(Color.Token.textPrimary)
             Divider()
@@ -1132,25 +1155,25 @@ private struct StoredBoardItemCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text(item.item.title)
-                .font(.subheadline.weight(.semibold))
+//                .font(.subheadline.weight(.semibold))
+                .adaptiveTextStyle(.subheadline)
+                .fontWeight(.semibold)
                 .foregroundStyle(Color.Token.textPrimary)
             if let description = item.item.descriptionText {
                 Text(description)
-                    .font(.caption)
+                    .adaptiveTextStyle(.caption)
                     .foregroundStyle(Color.Token.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
             if !item.item.assignees.isEmpty {
                 Text(item.item.assignees.map(\.name).joined(separator: ", "))
-                    .font(.caption)
-                    .foregroundStyle(Color.Token.textSecondary)
+                    .adaptiveTextStyle(.caption)                    .foregroundStyle(Color.Token.textSecondary)
             }
             Label(
                 "\(timestampTitle) \(item.storedAt.formatted(.dateTime.day().month(.abbreviated).year().hour().minute()))",
                 systemImage: "calendar"
             )
-            .font(.caption)
-            .foregroundStyle(Color.Token.textSecondary)
+            .adaptiveTextStyle(.caption)            .foregroundStyle(Color.Token.textSecondary)
             Button(actionTitle, systemImage: actionSystemImage, action: action)
                 .buttonStyle(.bordered)
                 .controlSize(.small)
@@ -1180,7 +1203,8 @@ struct BoardColumnView: View {
         VStack(alignment: .leading, spacing: 12) {
             Button(action: onSelectTeam) {
                 Text(column.title.capitalized)
-                    .font(.headline)
+//                    .font(.headline)
+                    .adaptiveTextStyle(.headline)
                     .foregroundStyle(Color.Token.textPrimary)
                     .lineLimit(1)
                     .minimumScaleFactor(0.85)
@@ -1224,6 +1248,7 @@ struct EmptyColumnView: View {
                 .foregroundStyle(Color.Token.textSecondary)
             Text("Tudo calmo por aqui!")
                 .font(.subheadline)
+//                .adaptiveTextStyle()
                 .foregroundStyle(Color.Token.textSecondary)
         }
         .frame(maxWidth: .infinity)
@@ -1263,14 +1288,17 @@ struct BoardItemCardView: View {
             }
 
             Text(item.title)
-                .font(.subheadline.weight(.semibold))
+//                .font(.subheadline.weight(.semibold))
+                .adaptiveTextStyle(.subheadline)
+                .fontWeight(.semibold)
                 .foregroundStyle(titleColor)
                 .lineLimit(2)
                 .minimumScaleFactor(0.85)
 
             if let description = item.descriptionText {
                 Text(description)
-                    .font(.caption)
+//                    .font(.caption)
+                    .adaptiveTextStyle(.caption)
                     .foregroundStyle(supportingTextColor)
                     .lineLimit(3)
                     .minimumScaleFactor(0.9)
@@ -1279,7 +1307,9 @@ struct BoardItemCardView: View {
                     Button("Ler mais") {
                         isEditing = true
                     }
-                    .font(.caption.weight(.semibold))
+//                    .font(.caption.weight(.semibold))
+                    .adaptiveTextStyle(.caption)
+                    .fontWeight(.semibold)
                     .buttonStyle(.link)
                     .accessibilityHint("Abre o card com a descrição completa")
                 }
@@ -1441,7 +1471,9 @@ private struct BoardItemEditorSheet: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
             Text("Editar card")
-                .font(.title2.weight(.semibold))
+//                .font(.title2.weight(.semibold))
+                .adaptiveTextStyle(.title2)
+                .fontWeight(.semibold)
 
             ScrollView {
                 Form {
@@ -1463,7 +1495,8 @@ private struct BoardItemEditorSheet: View {
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Descrição")
                         TextEditor(text: $draft.description)
-                            .font(.body)
+//                            .font(.body)
+                            .adaptiveTextStyle(.body)
                             .frame(height: 150)
                             .accessibilityLabel("Descrição")
                     }
@@ -1556,7 +1589,9 @@ private struct BoardItemPriorityTag: View {
                 .frame(width: 10, height: 10)
 
             Text(priority.title)
-                .font(.caption.weight(.medium))
+//                .font(.caption.weight(.medium))
+                .adaptiveTextStyle(.caption)
+                .fontWeight(.medium)
                 .foregroundStyle(.textPriorityTag)
         }
         .padding(.horizontal, 10)
@@ -1579,7 +1614,9 @@ private struct MetadataRow: View {
                 .font(.caption)
                 .foregroundStyle(theme.accentColor)
             Text(text)
-                .font(.caption.weight(highlighted ? .semibold : .regular))
+//                .font(.caption.weight(highlighted ? .semibold : .regular))
+                .adaptiveTextStyle(.caption)
+                .fontWeight(highlighted ? .semibold : .regular)
                 .foregroundStyle(highlighted ? Color.Token.statusAttention : textColor)
         }
     }

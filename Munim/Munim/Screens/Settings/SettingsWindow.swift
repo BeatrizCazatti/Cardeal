@@ -115,9 +115,7 @@ private struct GeneralSettingsView: View {
 
 private struct IntegrationsSettingsView: View {
     @ObservedObject var model: SettingsViewModel
-    @Environment(AuthService.self) private var authService
-    @Environment(\.dismiss) private var dismiss
-    @State private var isShowingDeleteConfirmation = false
+    @State private var showDeleteConfirmation = false
 
     var body: some View {
         Form {
@@ -174,6 +172,26 @@ private struct IntegrationsSettingsView: View {
                     } label: {
                         Label("Desconectar Conta", systemImage: "person.crop.circle.badge.minus")
                     }
+                    // Na sua View:
+                    Button(role: .destructive) {
+                        showDeleteConfirmation = true
+                    } label: {
+                        Text("Excluir Conta permanentemente")
+                    }
+                    .confirmationDialog(
+                        "Tem certeza que deseja excluir sua conta permanentemente?",
+                        isPresented: $showDeleteConfirmation,
+                        titleVisibility: .visible
+                    ) {
+                        Button("Excluir Conta", role: .destructive) {
+                            Task {
+                                await model.deleteAccount()
+                            }
+                        }
+                        Button("Cancelar", role: .cancel) {}
+                    }
+
+
                 }
             } header: {
                 Text("Google Workspace")
