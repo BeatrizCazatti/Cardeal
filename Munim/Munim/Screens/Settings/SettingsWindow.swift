@@ -115,6 +115,8 @@ private struct GeneralSettingsView: View {
 
 private struct IntegrationsSettingsView: View {
     @ObservedObject var model: SettingsViewModel
+    @Environment(AuthService.self) private var authService
+    @Environment(\.dismiss) private var dismiss
     @State private var showDeleteConfirmation = false
 
     var body: some View {
@@ -219,17 +221,17 @@ private struct IntegrationsSettingsView: View {
                 }
             }
 
-            Section("Outros Aplicativos") {
-                ForEach(model.integrations) { account in
-                    IntegrationRow(
-                        account: account,
-                        onToggle: { Task { await model.toggleIntegration(account.integration) } }
-                    )
-                }
-            }
+//            Section("Outros Aplicativos") {
+//                ForEach(model.integrations) { account in
+//                    IntegrationRow(
+//                        account: account,
+//                        onToggle: { Task { await model.toggleIntegration(account.integration) } }
+//                    )
+//                }
+//            }
 
             // MARK: - Exclusão de Conta & Dados (App Store Guideline 5.1.1(v))
-            Section {
+            Section() {
                 VStack(alignment: .leading, spacing: 14) {
                     HStack(alignment: .top, spacing: 12) {
                         Image(systemName: "exclamationmark.triangle.fill")
@@ -249,7 +251,7 @@ private struct IntegrationsSettingsView: View {
                     }
 
                     Button(role: .destructive) {
-                        isShowingDeleteConfirmation = true
+                        showDeleteConfirmation = true
                     } label: {
                         if model.isDeletingAccount {
                             HStack(spacing: 8) {
@@ -267,19 +269,20 @@ private struct IntegrationsSettingsView: View {
                     .tint(.red)
                     .controlSize(.large)
                     .disabled(model.isDeletingAccount)
-                }
+                }.padding(.top, 10)
                 .padding(.vertical, 4)
-            } header: {
-                Text("Zona de Perigo")
-                    .foregroundStyle(.red)
-            } footer: {
+            }
+            header: {
+                Text("Excluir Conta e Dados")
+            }
+            footer: {
                 Text("IMPORTANTE: 'Desconectar' apenas encerra a sessão atual mantendo seus dados no servidor. A 'Exclusão de Conta' é uma exclusão definitiva de registros e acessos conforme as diretrizes da Apple.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
         }
         .formStyle(.grouped)
-        .alert("⚠️ MUITO IMPORTANTE: Ação Destrutiva e Irreversível", isPresented: $isShowingDeleteConfirmation) {
+        .alert("⚠️ MUITO IMPORTANTE: Ação Destrutiva e Irreversível", isPresented: $showDeleteConfirmation) {
             Button("Cancelar", role: .cancel) { }
             Button("Excluir Definitivamente", role: .destructive) {
                 Task {
