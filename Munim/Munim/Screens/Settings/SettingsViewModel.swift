@@ -500,6 +500,18 @@ final class SettingsViewModel: ObservableObject {
         )
         googleScopes = []
     }
+    // MARK: - Exclusão de Conta (Guideline 5.1.1(v))
+
+    func deleteAccount() async {
+        do {
+            try await APIClient.shared.requestVoid("/api/account")
+            serverToken = ""
+            disconnectGoogle()
+        } catch {
+            // Imprime o erro exato retornado pelo servidor Vapor ou pelo URLSession
+            print("[SettingsViewModel] ❌ Falha ao excluir conta detalhada: \(error)")
+        }
+    }
 
     func toggleIntegration(_ integration: ThirdPartyIntegration) async {
         guard let index = integrations.firstIndex(where: { $0.integration == integration }) else { return }
