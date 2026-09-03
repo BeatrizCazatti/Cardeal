@@ -35,6 +35,7 @@ struct MunimApp: App {
 
         Window("Configurações", id: "settings") {
             SettingsWindow()
+                .environment(authService)
                 .environment(\.appTheme, theme)
                 .tint(theme.accentColor)
                 .dynamicTypeSize(.large ... .accessibility2)
@@ -204,21 +205,21 @@ private struct AppFlowView: View {
 //            DebugInspectorView()
 //                .environment(authService)
 //        }
-//        // Deep-link recebido → avança do onboarding para loading
-//        .onChange(of: authService.isAuthenticated) { _, isAuth in
-//            if isAuth && screen == .onboarding {
-//                screen = .loading
-//            } else if !isAuth {
-//                screen = .onboarding
-//            }
-//        }
-//        // 401 global → logout + volta para onboarding
-//        .onReceive(
-//            NotificationCenter.default.publisher(for: APIClient.unauthorizedNotification)
-//        ) { _ in
-//            authService.logout()
-//            screen = .onboarding
-//        }
+        // Deep-link recebido → avança do onboarding para loading; logout/exclusão → volta para onboarding
+        .onChange(of: authService.isAuthenticated) { _, isAuth in
+            if isAuth && screen == .onboarding {
+                screen = .loading
+            } else if !isAuth {
+                screen = .onboarding
+            }
+        }
+        // 401 global → logout + volta para onboarding
+        .onReceive(
+            NotificationCenter.default.publisher(for: APIClient.unauthorizedNotification)
+        ) { _ in
+            authService.logout()
+            screen = .onboarding
+        }
     }
 
     private func resizeWindow(to size: CGSize) {

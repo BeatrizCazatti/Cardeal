@@ -115,6 +115,9 @@ private struct GeneralSettingsView: View {
 
 private struct IntegrationsSettingsView: View {
     @ObservedObject var model: SettingsViewModel
+    @Environment(AuthService.self) private var authService
+    @Environment(\.dismiss) private var dismiss
+    @State private var isShowingDeleteConfirmation = false
 
     var body: some View {
         Form {
@@ -206,8 +209,71 @@ private struct IntegrationsSettingsView: View {
                     )
                 }
             }
+
+            // MARK: - Exclusão de Conta & Dados (App Store Guideline 5.1.1(v))
+            Section {
+                VStack(alignment: .leading, spacing: 14) {
+                    HStack(alignment: .top, spacing: 12) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .font(.title2)
+                            .foregroundStyle(.red)
+
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Excluir Conta e Todos os Dados")
+                                .font(.headline)
+                                .foregroundStyle(.red)
+
+                            Text("Esta é uma ação destrutiva e permanente. Todos os seus dados de login, tokens de autenticação, credenciais do Google Workspace e histórico de sincronização serão apagados dos nossos servidores e deste aplicativo.")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+
+                    Button(role: .destructive) {
+                        isShowingDeleteConfirmation = true
+                    } label: {
+                        if model.isDeletingAccount {
+                            HStack(spacing: 8) {
+                                ProgressView()
+                                    .scaleEffect(0.7)
+                                Text("Excluindo conta e dados…")
+                            }
+                            .frame(maxWidth: .infinity)
+                        } else {
+                            Label("Excluir Conta e Dados de Login", systemImage: "trash.fill")
+                                .frame(maxWidth: .infinity)
+                        }
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(.red)
+                    .controlSize(.large)
+                    .disabled(model.isDeletingAccount)
+                }
+                .padding(.vertical, 4)
+            } header: {
+                Text("Zona de Perigo")
+                    .foregroundStyle(.red)
+            } footer: {
+                Text("IMPORTANTE: 'Desconectar' apenas encerra a sessão atual mantendo seus dados no servidor. A 'Exclusão de Conta' é uma exclusão definitiva de registros e acessos conforme as diretrizes da Apple.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
         }
         .formStyle(.grouped)
+        .alert("⚠️ MUITO IMPORTANTE: Ação Destrutiva e Irreversível", isPresented: $isShowingDeleteConfirmation) {
+            Button("Cancelar", role: .cancel) { }
+            Button("Excluir Definitivamente", role: .destructive) {
+                Task {
+                    let success = await model.deleteAccount(authService: authService)
+                    if success {
+                        dismiss()
+                    }
+                }
+            }
+        } message: {
+            Text("POR FAVOR, LEIA COM MUITA ATENÇÃO:\n\nEsta ação é permanente e NÃO PODE ser desfeita. Ao confirmar, todos os seus dados de login, histórico de atividades, tokens de acesso, credenciais e integrações vinculadas serão permanentemente removidos tanto deste aplicativo quanto dos servidores da organização.\n\nTem certeza de que deseja excluir sua conta e todos os dados?")
+        }
     }
 
     private var activeScopeTags: String {

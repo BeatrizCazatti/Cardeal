@@ -344,6 +344,10 @@ final class SettingsViewModel: ObservableObject {
     @Published var members: [SettingsMember] = []
     @Published var teams: [SettingsTeam] = []
 
+    // Exclusão de conta (App Store 5.1.1(v))
+    @Published var isDeletingAccount: Bool = false
+    @Published var deleteAccountError: String? = nil
+
     // Terceiros (somente UI local por enquanto)
     @Published var integrations: [IntegrationAccount] = [
         IntegrationAccount(integration: .slack, workspace: "", isConnected: false),
@@ -499,6 +503,29 @@ final class SettingsViewModel: ObservableObject {
             connected: false, adminEmail: nil, connectedAt: nil, serviceAccountConfigured: false
         )
         googleScopes = []
+    }
+
+    // MARK: - Excluir Conta e Dados (App Store Guideline 5.1.1(v))
+
+    func deleteAccount(authService: AuthService) async -> Bool {
+        await MainActor.run {
+            isDeletingAccount = true
+            deleteAccountError = nil
+        }
+
+        do {
+            try await authService.deleteAccount()
+            await MainActor.run {
+                isDeletingAccount = false
+            }
+            return true
+        } catch {
+            await MainActor.run {
+                deleteAccountError = error.localizedDescription
+                isDeletingAccount = false
+            }
+            return false
+        }
     }
 
     func toggleIntegration(_ integration: ThirdPartyIntegration) async {

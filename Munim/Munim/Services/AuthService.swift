@@ -114,6 +114,12 @@ final class AuthService {
         isAuthenticated = false
     }
 
+    // MARK: - Excluir Conta e Dados (App Store 5.1.1(v))
+    func deleteAccount() async throws {
+        try await APIClient.shared.requestVoid("/api/auth/account", method: "DELETE")
+        logout()
+    }
+
     // MARK: - Parsear deep-link munim://auth/callback?token=... ou ?error=...
     // Retorna o token extraído da URL de callback, se válido.
     static func extractToken(from url: URL) -> String? {
