@@ -1101,7 +1101,7 @@ private struct StoredItemsColumnView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text(teamName)
+            Text(teamName.capitalized)
                 .font(.headline)
                 .foregroundStyle(Color.Token.textPrimary)
             Divider()
