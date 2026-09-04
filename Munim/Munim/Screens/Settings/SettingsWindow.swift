@@ -85,6 +85,29 @@ private struct GeneralSettingsView: View {
             }
 
             Section {
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        Text("Escala do texto")
+                        Spacer()
+                        Text("\(Int(model.textScale * 100))%")
+                            .font(.caption.monospacedDigit())
+                            .foregroundStyle(.secondary)
+                    }
+                    Slider(value: $model.textScale, in: 0.8...2.0, step: 0.1)
+                    Text("Exemplo")
+                        .font(.system(size: 13 * model.textScale))
+                        .foregroundStyle(.secondary)
+                }
+                .padding(.vertical, 4)
+            } header: {
+                Text("Tamanho do Texto")
+            } footer: {
+                Text("Ajusta o tamanho base de todos os textos do app no macOS. Valor padrão: 150%.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Section {
                 Picker("Sincronização automática", selection: $model.syncInterval) {
                     ForEach(SyncInterval.allCases) { interval in
                         Label(interval.rawValue, systemImage: interval.icon).tag(interval)

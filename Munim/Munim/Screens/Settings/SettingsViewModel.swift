@@ -303,6 +303,7 @@ final class SettingsViewModel: ObservableObject {
         static let serverToken = "settings.serverToken"
         static let sensitivity = "settings.sensitivity"
         static let confirmation = "settings.confirmation"
+        static let textScale = "macOSTextScale"
     }
 
     private let defaults: UserDefaults
@@ -317,6 +318,7 @@ final class SettingsViewModel: ObservableObject {
     @Published var serverToken: String { didSet { defaults.set(serverToken, forKey: Key.serverToken) } }
     @Published var captureSensitivity: Double { didSet { defaults.set(captureSensitivity, forKey: Key.sensitivity) } }
     @Published var requiresSchedulingConfirmation: Bool { didSet { defaults.set(requiresSchedulingConfirmation, forKey: Key.confirmation) } }
+    @Published var textScale: Double { didSet { defaults.set(textScale, forKey: Key.textScale) } }
 
     // MARK: - Dados do Backend (carregados via API)
 
@@ -366,6 +368,7 @@ final class SettingsViewModel: ObservableObject {
         serverToken = defaults.string(forKey: Key.serverToken) ?? ""
         captureSensitivity = Self.double(defaults, Key.sensitivity, 0.6)
         requiresSchedulingConfirmation = Self.bool(defaults, Key.confirmation, true)
+        textScale = Self.double(defaults, Key.textScale, 1.5)
 
         Task { await loadFromBackend() }
     }

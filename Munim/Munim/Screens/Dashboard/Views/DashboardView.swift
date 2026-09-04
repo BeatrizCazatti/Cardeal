@@ -658,7 +658,9 @@ private struct DashboardToolbarControls: View {
                         }
                     } label: {
                         Image(systemName: "xmark")
-                            .font(.caption2.weight(.bold))
+//                            .font(.caption2.weight(.bold))
+                            .adaptiveTextStyle(.caption2)
+                            .fontWeight(.bold)
                             .fontWeight(Font.Weight.bold)
                             .foregroundStyle(Color.Token.textSecondary)
                             .frame(width: 24, height: 24)
@@ -790,7 +792,8 @@ private struct SearchHistoryRow: View {
         Button(action: onTap) {
             HStack(spacing: 10) {
                 Image(systemName: "clock.arrow.circlepath")
-                    .font(.callout)
+//                    .font(.callout)
+                    .adaptiveTextStyle(.callout)
                     .foregroundStyle(Color.Token.textSecondary)
 
                 Text(text)
@@ -804,7 +807,9 @@ private struct SearchHistoryRow: View {
                 if isHovering {
                     Button(action: onDelete) {
                         Image(systemName: "xmark")
-                            .font(.caption2.weight(.bold))
+//                            .font(.caption2.weight(.bold))
+                            .adaptiveTextStyle(.caption2)
+                            .fontWeight(.bold)
                             .foregroundStyle(Color.Token.textSecondary)
                             .frame(width: 18, height: 18)
                             .background(Color.Token.surfaceRaised, in: Circle())
@@ -870,7 +875,8 @@ private struct DashboardRefreshStatusView: View {
                             .controlSize(.mini)
                     } else {
                         Image(systemName: "arrow.clockwise")
-                            .font(.caption2)
+//                            .font(.caption2)
+                            .adaptiveTextStyle(.caption2)
                     }
                     Text(isRefreshing ? "Atualizando…" : "Atualizar")
                 }
@@ -902,7 +908,9 @@ private struct DashboardToolbarPrimaryButton: View {
         Button(action: action) {
             HStack(spacing: 8) {
                 Image(systemName: systemImage)
-                    .font(.body.weight(.semibold))
+//                    .font(.body.weight(.semibold))
+                    .adaptiveTextStyle(.body)
+                    .fontWeight(.semibold)
 
                 Text(title)
 //                    .font(.body.weight(.semibold))
@@ -939,7 +947,7 @@ struct NewBoardItemSheet: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
             Text("Novo item")
-                .font(.title2.weight(.semibold))
+//                .font(.title2.weight(.semibold))
                 .adaptiveTextStyle(.title2)
                 .fontWeight(.semibold)
 
@@ -972,7 +980,8 @@ struct NewBoardItemSheet: View {
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Descrição")
                         TextEditor(text: $draft.description)
-                            .font(.body)
+//                            .font(.body)
+                            .adaptiveTextStyle(.body)
                             .frame(height: 150)
                             .accessibilityLabel("Descrição")
                     }
@@ -1244,11 +1253,13 @@ struct EmptyColumnView: View {
     var body: some View {
         VStack(spacing: 12) {
             Image(systemName: "wind")
-                .font(.largeTitle.weight(.light))
+//                .font(.largeTitle.weight(.light))
+                .adaptiveTextStyle(.largeTitle)
+                .fontWeight(Font.Weight.light)
                 .foregroundStyle(Color.Token.textSecondary)
             Text("Tudo calmo por aqui!")
-                .font(.subheadline)
-//                .adaptiveTextStyle()
+//                .font(.subheadline)
+                .adaptiveTextStyle(.subheadline)
                 .foregroundStyle(Color.Token.textSecondary)
         }
         .frame(maxWidth: .infinity)
@@ -1611,7 +1622,8 @@ private struct MetadataRow: View {
     var body: some View {
         HStack(spacing: 6) {
             Image(systemName: systemImage)
-                .font(.caption)
+//                .font(.caption)
+                .adaptiveTextStyle(.caption)
                 .foregroundStyle(theme.accentColor)
             Text(text)
 //                .font(.caption.weight(highlighted ? .semibold : .regular))

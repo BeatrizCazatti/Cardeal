@@ -40,7 +40,9 @@ struct InformationDetailSheet: View {
                 VStack(alignment: .leading, spacing: 28) {
                     // Título (Nome do Item)
                     Text(information.name)
-                        .font(.title.weight(.semibold))
+//                        .font(.title.weight(.semibold))
+                        .adaptiveTextStyle(.title)
+                        .fontWeight(.semibold)
                         .fixedSize(horizontal: false, vertical: true)
                     
                     // Metadados (Dono, Criado em, Link)
@@ -80,7 +82,8 @@ private struct InformationMetadataView: View {
                  Text(details.link)
                      .foregroundStyle(.primary) // Ou uma cor de link específica
             }
-            .font(.body)
+//            .font(.body)
+            .adaptiveTextStyle(.body)
         }
     }
 }
@@ -133,7 +136,8 @@ private struct InformationDetailRow: View {
             Text(value)
                 .fontWeight(.medium)
         }
-        .font(.body)
+//        .font(.body)
+        .adaptiveTextStyle(.body)
     }
 }
 

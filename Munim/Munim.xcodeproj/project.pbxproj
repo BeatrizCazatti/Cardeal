@@ -17,7 +17,7 @@
 				Info.plist,
 			);
 			platformFiltersByRelativePath = {
-				Shared/Models/TextScaleCustomModifier.swift = (macos, );
+				Shared/AdaptiveTextStyle.swift = (macos, );
 			};
 			target = 384F6F9E301FC92D00EBF2B3 /* Munim */;
 		};
