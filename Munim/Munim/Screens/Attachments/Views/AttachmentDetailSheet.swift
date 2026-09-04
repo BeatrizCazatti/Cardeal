@@ -29,7 +29,9 @@ struct AttachmentDetailSheet: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 28) {
                     Text(attachment.name)
-                        .font(.title.weight(.semibold))
+//                        .font(.title.weight(.semibold))
+                        .adaptiveTextStyle(.title)
+                        .fontWeight(Font.Weight.semibold)
                         .fixedSize(horizontal: false, vertical: true)
 
                     AttachmentMetadataView(details: attachment.details)
@@ -65,8 +67,9 @@ private struct AttachmentSourceView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
             Text("Origem da informação")
-                .font(.headline)
-
+//                .font(.headline)
+                .adaptiveTextStyle(.headline)
+                
             AttachmentDetailRow(label: "Canal", value: details.source, systemImage: "bubble.left.and.bubble.right.fill")
             AttachmentDetailRow(label: "Responsável", value: owner, systemImage: "person.fill")
 
@@ -81,7 +84,8 @@ private struct AttachmentSourceView: View {
                     Text(details.notes)
                         .italic()
                 }
-                .font(.body)
+//                .font(.body)
+                .adaptiveTextStyle(.body)
             }
         }
     }
@@ -102,6 +106,7 @@ private struct AttachmentDetailRow: View {
             Text(value)
                 .fontWeight(.medium)
         }
-        .font(.body)
+//        .font(.body)
+        .adaptiveTextStyle(.body)
     }
 }
